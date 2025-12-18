@@ -1,0 +1,267 @@
+export const dynamic = "force-dynamic";
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseServer } from "@/lib/supabaseServer";
+
+// GET /api/global-fields?app_id=123 - Fetch all global fields for an app
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const app_id = searchParams.get("app_id");
+
+    if (!app_id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Missing app_id query parameter",
+        },
+        { status: 400 }
+      );
+    }
+
+    const supabaseServer = getSupabaseServer();
+
+    const { data, error } = await supabaseServer
+      .from("global_fields")
+      .select("*")
+      .eq("app_id", app_id)
+      .order("order", { ascending: true });
+
+    if (error) {
+      console.error("[Scaffold] Supabase select error:", {
+        message: error.message,
+        details: error.details,
+        code: error.code,
+        table: "global_fields",
+        operation: "select",
+        app_id,
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          code: error.code,
+          details: error.details,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      fields: data || [],
+    });
+  } catch (error) {
+    console.error("[Scaffold] Route error:", error);
+
+    if (error instanceof Error) {
+      if (error.message.includes("Missing") && error.message.includes("environment variable")) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: error.message,
+            hint: "Check your .env.local file has all required variables. See .env.local.example for reference.",
+          },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/global-fields - Create a global user profile field
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+
+    const { app_id, field_name, field_label, field_type, required, order, options } = body;
+
+    // Validate required fields
+    if (!app_id || !field_name || !field_label || !field_type) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Missing required fields: app_id, field_name, field_label, and field_type are required",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate field_type
+    const validFieldTypes = ["text", "textarea", "select", "number"];
+    if (!validFieldTypes.includes(field_type)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Invalid field_type. Must be one of: ${validFieldTypes.join(", ")}`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // If field_type is "select", options are required
+    if (field_type === "select" && (!options || !Array.isArray(options) || options.length === 0)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Field type 'select' requires an 'options' array with at least one option",
+        },
+        { status: 400 }
+      );
+    }
+
+    const supabaseServer = getSupabaseServer();
+
+    // Prepare the data to insert
+    const fieldData: Record<string, unknown> = {
+      app_id,
+      field_name,
+      field_label,
+      field_type,
+      required: required ?? false,
+      order: order ?? 0,
+    };
+
+    // Only include options if field_type is select
+    if (field_type === "select" && options) {
+      fieldData.options = options;
+    }
+
+    const { data, error } = await supabaseServer
+      .from("global_fields")
+      .insert([fieldData])
+      .select()
+      .single();
+
+    if (error) {
+      console.error("[Scaffold] Supabase insert error:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        table: "global_fields",
+        operation: "insert",
+      });
+
+      if (error.code === "42501" || error.message?.includes("permission denied")) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "RLS policy error - service role key may not be configured correctly",
+            details: error.message,
+            hint: "Verify SUPABASE_SERVICE_ROLE_KEY is set correctly in .env.local",
+          },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          code: error.code,
+          details: error.details,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, field: data });
+  } catch (error) {
+    console.error("[Scaffold] Route error:", error);
+
+    if (error instanceof Error) {
+      if (error.message.includes("Missing") && error.message.includes("environment variable")) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: error.message,
+            hint: "Check your .env.local file has all required variables. See .env.local.example for reference.",
+          },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/global-fields?id=123 - Delete a global field
+export async function DELETE(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Missing id query parameter",
+        },
+        { status: 400 }
+      );
+    }
+
+    const supabaseServer = getSupabaseServer();
+
+    const { error } = await supabaseServer
+      .from("global_fields")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("[Scaffold] Supabase delete error:", {
+        message: error.message,
+        details: error.details,
+        code: error.code,
+        table: "global_fields",
+        operation: "delete",
+        id,
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+          code: error.code,
+          details: error.details,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[Scaffold] Route error:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
