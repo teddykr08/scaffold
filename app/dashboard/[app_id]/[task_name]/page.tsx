@@ -106,7 +106,7 @@ export default function TaskEditor({ params }: { params: { app_id: string, task_
                       <div key={f.id} className="flex items-center justify-between border p-2 rounded">
                         <div>
                           <div className="font-medium">{f.field_label}</div>
-                          <div className="text-xs text-gray-500 font-mono">{{`{{${f.field_name}}}`}}</div>
+                          <div className="text-xs text-gray-500 font-mono">{`{{${f.field_name}}}`}</div>
                         </div>
                         <div className="flex items-center gap-2">
                           <button onClick={() => moveField(f.id, 'up')} className="px-2">↑</button>
