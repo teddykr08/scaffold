@@ -25,7 +25,7 @@ export default function LoginPage() {
                 setError("Check your email for confirmation link!");
                 } else {
                 await signIn(email, password);
-                router.push("/builder");
+                router.push("/dashboard");
             }
         } catch (err: any) {
             setError(err.message);
