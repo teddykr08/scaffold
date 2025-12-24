@@ -85,7 +85,7 @@ export default function TaskEditor({ params }: { params: { app_id: string; task_
       <div className="max-w-6xl mx-auto grid grid-cols-3 gap-6">
         <div className="col-span-3">
           <button onClick={() => router.push(`/dashboard/${app_id}`)} className="text-sm text-gray-600">
-            ← Back to Projects
+            &lt; Back to Projects
           </button>
           <h1 className="text-2xl font-bold mt-2">Task: {task_name}</h1>
         </div>
