@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate field_type
-    const validFieldTypes = ["text", "textarea", "select", "number"];
+    const validFieldTypes = ["text", "textarea", "select", "number", "runtime"];
     if (!validFieldTypes.includes(field_type)) {
       return NextResponse.json(
         {
@@ -276,6 +276,33 @@ export async function DELETE(req: NextRequest) {
       { success: false, error: "Internal server error" },
       { status: 500 }
     );
+  }
+}
+
+// PATCH /api/task-fields - Update order values for multiple fields
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { updates } = body; // expecting [{ id, order }, ...]
+
+    if (!Array.isArray(updates) || updates.length === 0) {
+      return NextResponse.json({ success: false, error: 'Missing updates array' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseServer();
+
+    for (const u of updates) {
+      if (!u?.id) continue;
+      const { error } = await supabase.from('task_fields').update({ order: u.order ?? 0 }).eq('id', u.id);
+      if (error) {
+        console.error('Error updating task_field order', error);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   }
 }
 

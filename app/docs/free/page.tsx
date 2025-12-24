@@ -2,22 +2,36 @@ import Link from "next/link";
 
 export default function FreeDocs() {
   return (
-    <main className="max-w-3xl mx-auto py-16 px-6">
-      <h1 className="text-4xl font-bold mb-6">Scaffold FREE</h1>
+    <main className="max-w-3xl mx-auto px-6 py-16">
+      <h1 className="text-4xl font-bold mb-6">Scaffold — FREE</h1>
 
-      <p className="mb-6 text-gray-700">
-        Embed AI prompts into your app with zero API keys.
+      <p className="text-lg mb-8 text-gray-700">
+        Scaffold FREE lets you embed AI-powered forms into your app without
+        OpenAI API keys or usage costs.
       </p>
 
-      <pre className="bg-gray-100 p-4 rounded mb-6 text-sm overflow-x-auto">
+      <h2 className="text-2xl font-semibold mb-4">What you get</h2>
+      <ul className="list-disc pl-6 mb-8 text-gray-700">
+        <li>Embeddable forms via iframe</li>
+        <li>Custom prompts per app & task</li>
+        <li>Uses the user’s own ChatGPT session</li>
+        <li>No authentication required</li>
+      </ul>
+
+      <h2 className="text-2xl font-semibold mb-4">Basic Embed</h2>
+      <pre className="bg-gray-100 p-4 rounded-lg text-sm overflow-x-auto mb-8">
         {`<iframe
   src="https://YOUR_SCAFFOLD_URL/embed/form?app_id=YOUR_APP_ID&task_name=write_email"
   width="100%"
   height="600"
-></iframe>`}
+  frameborder="0">
+</iframe>`}
       </pre>
 
-      <Link href="/" className="text-blue-600 underline">
+      <Link
+        href="/"
+        className="inline-block mt-8 text-blue-600 hover:underline"
+      >
         ← Back to Home
       </Link>
     </main>

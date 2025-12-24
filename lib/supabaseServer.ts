@@ -35,11 +35,9 @@ export function getSupabaseServer(): SupabaseClient {
     throw new Error("[Scaffold] Missing SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL.");
   }
 
-  // Log only at runtime to avoid build-time log noise
-  if (!isBuildPhase) {
-    console.log(
-      `[Scaffold] Initializing Supabase server client (Key starts with: ${serviceRoleKey.substring(0, 10)}...)`
-    );
+  // No logging of keys or sensitive info
+  if (!isBuildPhase && process.env.NODE_ENV === 'development') {
+    console.log("[Scaffold] Initializing Supabase server client");
   }
 
   supabaseServerInstance = createClient(supabaseUrl, serviceRoleKey, {

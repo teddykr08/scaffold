@@ -26,7 +26,7 @@ export async function GET(
       .single();
 
     if (error) {
-      console.error("[Woven] Supabase select error:", {
+      console.error("[Scaffold] Supabase select error:", {
         message: error.message,
         details: error.details,
         code: error.code,
@@ -62,7 +62,7 @@ export async function GET(
       app: data,
     });
   } catch (error) {
-    console.error("[Woven] Route error:", error);
+    console.error("[Scaffold] Route error:", error);
 
     if (error instanceof Error) {
       if (error.message.includes("Missing") && error.message.includes("environment variable")) {

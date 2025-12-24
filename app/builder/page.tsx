@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "../context/AuthContext";
+import { useRouter } from "next/navigation";
 
 type AppRow = {
   id: string;
@@ -14,10 +16,11 @@ type TaskRow = {
   name: string;
   description: string | null;
   system_header?: string | null;
+  fixed_content?: string | null;
   created_at: string;
 };
 
-type FieldType = "text" | "textarea" | "select" | "number";
+type FieldType = "text" | "textarea" | "select" | "number" | "runtime";
 
 type FieldRow = {
   id: string;
@@ -62,15 +65,16 @@ function safeJson(res: Response) {
   });
 }
 
-// ✅ NEW: Quality Guardrail Function
+// ✅ Quality Guardrail Function
 function validateTemplate(template: string, fields: FieldRow[]): string | null {
   // Extract all {{variable}} from template
   const templateVars = [...template.matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1]);
-
+  
   // Get all field names
   const fieldNames = fields.map(f => f.field_name);
-
-  // Find variables that do not have corresponding fields
+  
+  // Find variables that don't have corresponding fields
+  // Note: <<fixed>> uses different brackets, so it won't be caught here
   const missing = templateVars.filter(v => !fieldNames.includes(v) && v !== "system_header");
 
   if (missing.length > 0) {
@@ -80,16 +84,18 @@ function validateTemplate(template: string, fields: FieldRow[]): string | null {
   return null;
 }
 
-
 // Auto-generate template from fields
 function generateTemplateFromFields(fields: FieldRow[]): string {
   const header = "You are a [define here]";
 
-  if (fields.length === 0) {
+  // Exclude runtime variables from auto-generation as they are handled dynamically
+  const formFields = fields.filter(f => f.field_type !== "runtime");
+
+  if (formFields.length === 0) {
     return header;
   }
 
-  const fieldLines = fields
+  const fieldLines = formFields
     .sort((a, b) => a.order - b.order)
     .map(f => `${f.field_label}: {{${f.field_name}}}`)
     .join("\n");
@@ -161,7 +167,7 @@ function InfoTooltip({
             </div>
             {important && (
               <div className="bg-red-50 text-red-800 p-2 rounded border border-red-100 text-xs font-medium">
-                {"⚠️"} {important}
+                ⚠️ {important}
               </div>
             )}
           </div>
@@ -172,6 +178,34 @@ function InfoTooltip({
 }
 
 export default function BuilderPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  // New: redirect builder to dashboard (replace builder UI)
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   // --- App ---
   const [apps, setApps] = useState<AppRow[]>([]);
   const [selectedAppId, setSelectedAppId] = useState<string>("");
@@ -184,7 +218,6 @@ export default function BuilderPage() {
   const [lastSavedTemplate, setLastSavedTemplate] = useState<string>("");
 
   // --- Fields ---
-  const [globalFields, setGlobalFields] = useState<FieldRow[]>([]);
   const [taskFields, setTaskFields] = useState<FieldRow[]>([]);
   const [status, setStatus] = useState<string>("");
 
@@ -200,7 +233,7 @@ export default function BuilderPage() {
   }, [selectedAppId, selectedTaskName]);
 
   const prodEmbedUrlHint = useMemo(() => {
-    return embedUrl ? `https://YOUR_SCAFFOLD_DOMAIN${embedUrl}` : "";
+    return embedUrl ? `https://scaffoldtool.vercel.app${embedUrl}` : "";
   }, [embedUrl]);
 
   async function refreshApps() {
@@ -219,13 +252,6 @@ export default function BuilderPage() {
     const res = await fetch(`/api/tasks?app_id=${encodeURIComponent(selectedAppId)}`);
     const data = await safeJson(res);
     if (data?.success) setTasks(data.tasks || []);
-  }
-
-  async function refreshGlobalFields(appId: string) {
-    if (!appId) return;
-    const res = await fetch(`/api/global-fields?app_id=${encodeURIComponent(appId)}`);
-    const data = await safeJson(res);
-    if (data?.success) setGlobalFields(data.fields || []);
   }
 
   async function refreshTaskFields(appId: string, taskName: string) {
@@ -249,13 +275,11 @@ export default function BuilderPage() {
       const rows: TemplateRow[] = data.templates || [];
       setTemplates(rows);
 
-      // Only load saved template if one exists and we aren't skipping it (e.g. after a manual save)
       if (!options?.skipSetTemplate) {
         if (rows.length && rows[0]?.template) {
           setTemplate(rows[0].template);
           setLastSavedTemplate(rows[0].template);
         } else {
-          // If no template exists in DB, set to the default "fresh start" state
           setTemplate("You are a [define here]");
           setLastSavedTemplate("");
         }
@@ -270,10 +294,8 @@ export default function BuilderPage() {
 
   useEffect(() => {
     if (!selectedAppId) return;
-    setGlobalFields([]);
     setTasks([]);
     setTemplates([]);
-    refreshGlobalFields(selectedAppId);
     refreshTasks();
     refreshTemplates(selectedAppId, selectedTaskName);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -282,16 +304,10 @@ export default function BuilderPage() {
   useEffect(() => {
     if (!selectedAppId || !selectedTaskName) return;
     setTaskFields([]);
-    // We don't clear 'template' here to allow manual edits, 
-    // but refreshTemplates will update it soon.
     refreshTaskFields(selectedAppId, selectedTaskName);
     refreshTemplates(selectedAppId, selectedTaskName);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedTaskName, selectedAppId]);
-
-
-
-
 
   async function createApp() {
     setStatus("");
@@ -302,10 +318,10 @@ export default function BuilderPage() {
     });
     const data = await safeJson(res);
     if (!data?.success) {
-      setStatus(`[X] Create app failed: ${data?.error || "unknown error"}`);
+      setStatus(`❌ Create app failed: ${data?.error || "unknown error"}`);
       return;
     }
-    setStatus("[OK] App created");
+    setStatus("✅ App created");
 
     setNewAppName("");
     await refreshApps();
@@ -316,13 +332,13 @@ export default function BuilderPage() {
     setStatus("");
 
     if (!selectedAppId) {
-      setStatus("[X] Select an app first");
+      setStatus("❌ Select an app first");
       return;
     }
 
     const name = newTaskName.trim();
     if (!name) {
-      setStatus("[X] Task name required");
+      setStatus("❌ Task name required");
       return;
     }
     const res = await fetch("/api/tasks", {
@@ -335,30 +351,13 @@ export default function BuilderPage() {
     });
     const data = await safeJson(res);
     if (!data?.success) {
-      setStatus(`[X] Create task failed: ${data?.error || "unknown error"}`);
+      setStatus(`❌ Create task failed: ${data?.error || "unknown error"}`);
       return;
     }
-    setStatus("[OK] Task created");
+    setStatus("✅ Task created");
     setNewTaskName("");
     await refreshTasks();
     setSelectedTaskName(name);
-  }
-
-  async function addGlobalField(f: Partial<FieldRow>) {
-    if (!selectedAppId) return;
-    setStatus("");
-    const res = await fetch("/api/global-fields", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ app_id: selectedAppId, ...f }),
-    });
-    const data = await safeJson(res);
-    if (!data?.success) {
-      setStatus(`[X] Add global field failed: ${data?.error || "unknown error"}`);
-      return;
-    }
-    setStatus("[OK] Global field added");
-    await refreshGlobalFields(selectedAppId);
   }
 
   async function addTaskField(f: Partial<FieldRow>) {
@@ -371,31 +370,11 @@ export default function BuilderPage() {
     });
     const data = await safeJson(res);
     if (!data?.success) {
-      setStatus(`[X] Add task field failed: ${data?.error || "unknown error"}`);
+      setStatus(`❌ Add task field failed: ${data?.error || "unknown error"}`);
       return;
     }
-    setStatus("[OK] Task field added");
+    setStatus("✅ Task field added");
     await refreshTaskFields(selectedAppId, selectedTaskName);
-  }
-
-  // ✅ UPDATED: saveTemplate now includes validation
-  async function deleteGlobalField(fieldId: string) {
-    if (!selectedAppId) return;
-    if (!confirm("Are you sure you want to delete this global field?")) return;
-
-    setStatus("");
-    const res = await fetch(`/api/global-fields?id=${fieldId}`, {
-      method: "DELETE",
-    });
-    const data = await safeJson(res);
-
-    if (!data?.success) {
-      setStatus(`[X] Delete global field failed: ${data?.error || "unknown error"}`);
-      return;
-    }
-
-    setStatus("✅ Global field deleted");
-    await refreshGlobalFields(selectedAppId);
   }
 
   async function deleteTaskField(fieldId: string) {
@@ -409,7 +388,7 @@ export default function BuilderPage() {
     const data = await safeJson(res);
 
     if (!data?.success) {
-      setStatus(`[X] Delete task field failed: ${data?.error || "unknown error"}`);
+      setStatus(`❌ Delete task field failed: ${data?.error || "unknown error"}`);
       return;
     }
 
@@ -419,17 +398,15 @@ export default function BuilderPage() {
 
   async function saveTemplate() {
     if (!selectedAppId || !selectedTaskName) {
-      setStatus("[X] Select app + task first");
+      setStatus("❌ Select app + task first");
       return;
     }
 
-    // ✅ NEW: Validate template before saving
-    const allFields = [...globalFields, ...taskFields];
+    const allFields = taskFields;
     const warning = validateTemplate(template, allFields);
 
     if (warning) {
       setStatus(warning);
-      // Still allow save, just warn
     }
 
     setStatus("");
@@ -444,18 +421,15 @@ export default function BuilderPage() {
     });
     const data = await safeJson(res);
     if (!data?.success) {
-      setStatus(`[X] Save template failed: ${data?.error || "unknown error"}`);
+      setStatus(`❌ Save template failed: ${data?.error || "unknown error"}`);
       return;
     }
 
-    // Show validation warning if exists, otherwise success
     if (warning) {
       setStatus(`${warning}\n\n✅ Template saved anyway (fix the warnings above)`);
     } else {
       setStatus("✅ Template saved");
       setLastSavedTemplate(template);
-      // We refresh the template list but SKIP setting the textarea state
-      // so the user's current cursor position and content remain untouched.
       await refreshTemplates(selectedAppId, selectedTaskName, { skipSetTemplate: true });
     }
   }
@@ -482,7 +456,7 @@ export default function BuilderPage() {
       <div className="rounded-xl border border-gray-200 p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="font-semibold">
-            Add {kind === "global" ? "Global" : "Task"} Field
+            Add Field
           </div>
           <div className="text-xs text-gray-500">order: {nextOrder}</div>
         </div>
@@ -562,7 +536,7 @@ export default function BuilderPage() {
               placeholder="Leave blank for no default"
             />
             <div className="text-xs text-gray-500 mt-1">
-              {"If you do not want defaults in FREE, just leave this blank."}
+              If you do not want defaults in FREE, just leave this blank.
             </div>
           </div>
         </div>
@@ -594,7 +568,76 @@ export default function BuilderPage() {
     );
   }
 
-  const nextGlobalOrder = (globalFields?.reduce((m, f) => Math.max(m, f.order || 0), 0) || 0) + 1;
+  function RuntimeVariableCreator({
+    onAdd,
+    nextOrder,
+  }: {
+    onAdd: (f: Partial<FieldRow>) => Promise<void>;
+    nextOrder: number;
+  }) {
+    const [name, setName] = useState("");
+    const [description, setDescription] = useState("");
+
+    return (
+      <div className="rounded-xl border border-dashed border-gray-300 p-4 bg-gray-50">
+        <div className="flex items-center justify-between mb-3">
+          <div className="font-semibold text-gray-700 font-mono">
+            New Runtime Variable
+          </div>
+          <div className="text-xs text-gray-400">order: {nextOrder}</div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div>
+            <label className="text-sm text-gray-700 font-medium">Variable Name</label>
+            <input
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm"
+              value={name}
+              onChange={(e) => setName(slugifyFieldName(e.target.value))}
+              placeholder="e.g. user_id"
+            />
+            <div className="text-xs text-gray-500 mt-1">
+              Used in template as: <span className="font-mono bg-white px-1 rounded border">{`{{${name || "..."}}}`}</span>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-700 font-medium">Description (Internal)</label>
+            <input
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Unique ID for the user"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-[10px] text-gray-400 uppercase tracking-widest font-bold">
+            Runtime variables are NOT shown to users in the embed form.
+          </p>
+          <button
+            className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 text-sm font-medium transition-colors"
+            onClick={async () => {
+              if (!name.trim()) return;
+              await onAdd({
+                field_label: description.trim() || name.trim(),
+                field_name: name.trim(),
+                field_type: "runtime",
+                required: false,
+                order: nextOrder,
+              });
+              setName("");
+              setDescription("");
+            }}
+          >
+            Add Runtime Variable
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const nextTaskOrder = (taskFields?.reduce((m, f) => Math.max(m, f.order || 0), 0) || 0) + 1;
 
   return (
@@ -728,8 +771,6 @@ export default function BuilderPage() {
               >
                 Create Task
               </button>
-
-
             </div>
           </div>
         </div>
@@ -754,102 +795,113 @@ export default function BuilderPage() {
           </div>
 
           {prodEmbedUrlHint && (
-            <div className="mt-2 text-xs text-gray-500 font-mono break-all">
-              Example (deployed): {prodEmbedUrlHint}
-            </div>
+            <>
+              <div className="mt-2 text-xs text-gray-500 font-mono break-all">
+                Base URL: {prodEmbedUrlHint}
+              </div>
+              <div className="mt-2 rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs">
+                <div className="font-semibold text-blue-900 mb-1">💡 Adding Dynamic Context:</div>
+                <div className="text-blue-800 font-mono break-all">
+                  {prodEmbedUrlHint}&fixed=your+context+here
+                </div>
+                <div className="text-blue-700 mt-2">
+                  Replace "your+context+here" with the dynamic content. Use + for spaces or %20.
+                </div>
+              </div>
+            </>
           )}
         </div>
 
         {/* Fields */}
-        <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div>
-            <FieldCreator kind="global" onAdd={addGlobalField} nextOrder={nextGlobalOrder} />
+        <div className="mt-6">
+          <FieldCreator kind="task" onAdd={addTaskField} nextOrder={nextTaskOrder} />
 
-            <div className="mt-4 rounded-xl border border-gray-200 p-4">
-              <div className="font-semibold mb-2 flex items-center">
-                Global fields
-                <InfoTooltip
-                  title="Global Fields"
-                  purpose="Fields shared across ALL tasks in this app."
-                  whatItDoes="Asks the user for this info once, and reuses it everywhere."
-                  example="User Name, Job Title, Company Name"
-                  whenToUse="Use for profile-level info that does not change often."
-                />
-              </div>
-              <div className="text-sm text-gray-600 mb-3">
-                These show once (profile) and can be reused across tasks.
-              </div>
-
-              <ul className="space-y-2 text-sm">
-                {globalFields.map((f) => (
-                  <li key={f.id} className="relative rounded-lg border border-gray-100 p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="font-medium">{f.field_label}</div>
-                      <div className="text-xs text-gray-500">
-                        {f.required ? "required" : "optional"} {"·"} {f.field_type} {"·"} order {f.order}
-                      </div>
-                    </div>
-                    <div className="mt-1 text-xs text-gray-500 font-mono">{`{{${f.field_name}}}`}</div>
-                    <button
-                      onClick={() => deleteGlobalField(f.id)}
-                      className="absolute top-3 right-3 text-gray-400 hover:text-red-600"
-                      title="Delete field"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                      </svg>
-                    </button>
-                  </li>
-                ))}
-                {!globalFields.length && (
-                  <li className="text-gray-500">No global fields yet.</li>
-                )}
-              </ul>
+          <div className="mt-4 rounded-xl border border-gray-200 p-4">
+            <div className="font-semibold mb-2 flex items-center">
+              Fields
+              <InfoTooltip
+                title="Task Fields"
+                purpose="Form inputs for this task."
+                whatItDoes="Asks the user for info needed for this specific action."
+                example="Email Recipient, Tone, Recipe Ingredients"
+                whenToUse="Use for inputs that change every time the user runs this task."
+              />
             </div>
-          </div>
+            <div className="text-sm text-gray-600 mb-3">
+              These show in the form for task: <span className="font-mono">{selectedTaskName}</span>
+            </div>
 
-          <div>
-            <FieldCreator kind="task" onAdd={addTaskField} nextOrder={nextTaskOrder} />
-
-            <div className="mt-4 rounded-xl border border-gray-200 p-4">
-              <div className="font-semibold mb-2 flex items-center">
-                Task fields
-                <InfoTooltip
-                  title="Task Fields"
-                  purpose="Fields specific to THIS task only."
-                  whatItDoes="Asks the user for info needed just for this specific action."
-                  example="Email Recipient, Tone, Recipe Ingredients"
-                  whenToUse="Use for inputs that change every time the user runs this task."
-                />
-              </div>
-              <div className="text-sm text-gray-600 mb-3">
-                {"These show every time for task:"} <span className="font-mono">{selectedTaskName}</span>
-              </div>
-
-              <ul className="space-y-2 text-sm">
-                {taskFields.map((f) => (
-                  <li key={f.id} className="relative rounded-lg border border-gray-100 p-3">
-                    <div className="flex items-center justify-between">
-                      <div className="font-medium">{f.field_label}</div>
-                      <div className="text-xs text-gray-500">
-                        {f.required ? "required" : "optional"} {"·"} {f.field_type} {"·"} order {f.order}
-                      </div>
+            <ul className="space-y-2 text-sm">
+              {taskFields.filter(f => f.field_type !== "runtime").map((f) => (
+                <li key={f.id} className="relative rounded-lg border border-gray-100 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium">{f.field_label}</div>
+                    <div className="text-xs text-gray-500">
+                      {f.required ? "required" : "optional"} · {f.field_type} · order {f.order}
                     </div>
-                    <div className="mt-1 text-xs text-gray-500 font-mono">{`{{${f.field_name}}}`}</div>
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500 font-mono">{`{{${f.field_name}}}`}</div>
+                  <button
+                    onClick={() => deleteTaskField(f.id)}
+                    className="absolute top-3 right-3 text-gray-400 hover:text-red-600"
+                    title="Delete field"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </li>
+              ))}
+              {!taskFields.filter(f => f.field_type !== "runtime").length && <li className="text-gray-500">No fields yet.</li>}
+            </ul>
+          </div>
+        </div>
+
+        {/* Runtime Variables */}
+        <div className="mt-8 rounded-xl border border-gray-200 p-5 bg-white">
+          <h2 className="font-semibold text-lg flex items-center">
+            3) Runtime Variables
+            <InfoTooltip
+              title="Runtime Variables"
+              purpose="Context passed by your app, not the user."
+              whatItDoes="Allows you to inject data like user_id, organization_name, or session_context directly into the prompt without the user seeing it."
+              whenToUse="Use for data your app already knows about the user or the context."
+            />
+          </h2>
+          <p className="text-gray-600 text-sm mt-1">
+            Provided by your app at request time. These are <strong>not shown</strong> to users in the embed form.
+          </p>
+
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <RuntimeVariableCreator onAdd={addTaskField} nextOrder={nextTaskOrder} />
+
+            <div className="rounded-xl border border-gray-100 p-4 bg-gray-50/30">
+              <div className="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wider">Active Runtime Variables</div>
+              <ul className="space-y-2">
+                {taskFields.filter(f => f.field_type === "runtime").map((f) => (
+                  <li key={f.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
+                    <div>
+                      <div className="font-mono text-sm font-bold text-blue-700">{`{{${f.field_name}}}`}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">{f.field_label}</div>
+                    </div>
                     <button
                       onClick={() => deleteTaskField(f.id)}
-                      className="absolute top-3 right-3 text-gray-400 hover:text-red-600"
-                      title="Delete field"
+                      className="text-gray-400 hover:text-red-600 p-1"
+                      title="Remove runtime variable"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="3 6 5 6 21 6"></polyline>
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
                       </svg>
                     </button>
                   </li>
                 ))}
-                {!taskFields.length && <li className="text-gray-500">No task fields yet.</li>}
+                {!taskFields.filter(f => f.field_type === "runtime").length && (
+                  <div className="text-center py-6 text-gray-400 text-sm italic border-2 border-dashed border-gray-100 rounded-lg">
+                    No runtime variables defined for this task.
+                  </div>
+                )}
               </ul>
             </div>
           </div>
@@ -867,30 +919,116 @@ export default function BuilderPage() {
               important={"You MUST click \"Save template\" at least once! If you do not, the embed form will fail with \"No template found\"."}
             />
           </h2>
-          <p className="text-gray-600 text-sm mt-1">
-            Your template will auto-generate as you add fields. Customize the instructions as needed.
-          </p>
-
           <div className="mt-2 rounded-lg bg-green-50 border border-green-200 p-4 text-sm">
             <div className="font-semibold text-green-900 mb-2">Example: Prompt Template</div>
             <pre className="font-mono text-xs text-green-800 whitespace-pre-wrap">
-              {`You are a professional writing assistant.
+{`You are a local search assistant.
 
-Recipient: {{recipient}}
-Subject: {{subject}}
-Tone: {{tone}}`}
+Find <<fixed>> near {{location}} within {{radius}} miles.
+
+Provide the top 3 results with:
+- Name and address
+- Distance from user
+- User ratings`}
             </pre>
             <p className="text-xs text-green-700 mt-2">
-              ℹ️ Your template will auto-generate as you add fields. Customize the instructions as needed.
+              ℹ️ <span className="font-mono">{"<<fixed>>"}</span> comes from URL, <span className="font-mono">{"{{location}}"}</span> comes from form fields
             </p>
           </div>
+          <div className="mt-2 rounded-lg bg-purple-50 border border-purple-200 p-4 text-sm">
+            <div className="font-semibold text-purple-900 mb-2">💡 Special Variable: {"<<fixed>>"}</div>
+            <p className="text-purple-800 mb-2">
+              Use <span className="font-mono bg-purple-100 px-1">{"<<fixed>>"}</span> in your template for dynamic context that developers pass via URL.
+            </p>
+            <div className="bg-white rounded p-3 mt-2">
+              <div className="text-xs font-semibold text-purple-900 mb-1">Example Use Case:</div>
+              <div className="text-xs text-purple-800 space-y-1">
+                <div><strong>Template:</strong> <span className="font-mono">Find {"<<fixed>>"} near {{location}}</span></div>
+                <div><strong>Embed URL:</strong> <span className="font-mono">/embed/form?...&fixed=birria tacos</span></div>
+                <div><strong>Result:</strong> User sees location field only, but prompt says "Find birria tacos near [location]"</div>
+              </div>
+            </div>
+            <p className="text-xs text-purple-700 mt-2">
+              ℹ️ The <span className="font-mono">{"<<fixed>>"}</span> value is NOT a form field - it comes from the embed URL parameter.
+            </p>
+          </div>
+          <div className="mt-4 grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <div className="lg:col-span-3">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Template Editor</label>
+              <textarea
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                rows={12}
+                value={template}
+                onChange={(e) => setTemplate(e.target.value)}
+                placeholder="Write your prompt here using {{variable}} syntax..."
+              />
+            </div>
+            <div className="lg:col-span-1">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Available Variables</label>
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 space-y-4 max-h-[300px] overflow-y-auto">
+                <div>
+                  <div className="text-[10px] text-gray-400 font-bold mb-1">USER INPUTS</div>
+                  <div className="flex flex-wrap gap-1">
+                    {taskFields.filter(f => f.field_type !== "runtime").map(f => (
+                      <button
+                        key={f.id}
+                        onClick={() => setTemplate(prev => prev + `{{${f.field_name}}}`)}
+                        className="text-[10px] font-mono bg-white border border-gray-300 rounded px-1.5 py-0.5 hover:border-blue-500 hover:text-blue-600 transition-colors"
+                        title={f.field_label}
+                      >
+                        {`{{${f.field_name}}}`}
+                      </button>
+                    ))}
+                    {!taskFields.filter(f => f.field_type !== "runtime").length && <div className="text-[10px] text-gray-400 italic">No fields yet</div>}
+                  </div>
+                </div>
 
-          <textarea
-            className="mt-3 w-full rounded-lg border border-gray-300 px-3 py-2 font-mono text-sm"
-            rows={10}
-            value={template}
-            onChange={(e) => setTemplate(e.target.value)}
-          />
+                <div>
+                  <div className="text-[10px] text-blue-400 font-bold mb-1">RUNTIME VARS</div>
+                  <div className="flex flex-wrap gap-1">
+                    {taskFields.filter(f => f.field_type === "runtime").map(f => (
+                      <button
+                        key={f.id}
+                        onClick={() => setTemplate(prev => prev + `{{${f.field_name}}}`)}
+                        className="text-[10px] font-mono bg-blue-50 border border-blue-200 text-blue-700 rounded px-1.5 py-0.5 hover:border-blue-500 hover:bg-blue-100 transition-colors"
+                        title={f.field_label}
+                      >
+                        {`{{${f.field_name}}}`}
+                      </button>
+                    ))}
+                    {!taskFields.filter(f => f.field_type === "runtime").length && <div className="text-[10px] text-gray-400 italic">No runtime vars</div>}
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-gray-200">
+                  <div className="text-[10px] text-gray-400 font-bold mb-1">SYSTEM</div>
+                  <button
+                    onClick={() => setTemplate(prev => prev + `{{system_header}}`)}
+                    className="text-[10px] font-mono bg-gray-200 border border-gray-300 rounded px-1.5 py-0.5 hover:border-gray-400 transition-colors"
+                  >
+                    {"{{system_header}}"}
+                  </button>
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-2 italic">Click a variable to insert it at the end.</p>
+            </div>
+          </div>
+
+          {/* Live Preview */}
+          <div className="mt-6 rounded-xl border border-blue-50 bg-blue-50/30 p-5">
+            <h3 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>
+              Live Preview (Mock Data)
+            </h3>
+            <div className="bg-white rounded-lg border border-blue-100 p-4 font-mono text-xs text-gray-700 whitespace-pre-wrap shadow-inner min-h-[100px]">
+              {template.replace(/\{\{(\w+)\}\}/g, (match, p1) => {
+                const field = taskFields.find(f => f.field_name === p1);
+                if (p1 === "system_header") return "[System Header Instructions]";
+                if (field?.field_type === "runtime") return `<runtime:${p1}>`;
+                return `[${field?.field_label || p1}]`;
+              })}
+            </div>
+          </div>
 
           <div className="mt-3 flex items-center gap-3">
             <button
@@ -906,7 +1044,7 @@ Tone: {{tone}}`}
             <button
               className="rounded-lg border border-blue-300 px-4 py-2 text-blue-700 hover:bg-blue-50 flex items-center gap-2"
               onClick={() => {
-                const allFields = [...globalFields, ...taskFields];
+                const allFields = taskFields;
                 const generated = generateTemplateFromFields(allFields);
                 setTemplate(generated);
                 setStatus("✅ Template regenerated from fields");
