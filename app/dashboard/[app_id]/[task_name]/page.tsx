@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import VariableTracker from "../../../components/VariableTracker";
-import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 
 export default function TaskEditor({ params }: { params: { app_id: string, task_name: string } }){
   const { app_id, task_name } = params;
