@@ -187,13 +187,6 @@ export default function BuilderPage() {
     }
   }, [user, loading, router]);
 
-  // New: redirect builder to dashboard (replace builder UI)
-  useEffect(() => {
-    if (!loading && user) {
-      router.push('/dashboard');
-    }
-  }, [user, loading, router]);
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -943,7 +936,7 @@ Provide the top 3 results with:
             <div className="bg-white rounded p-3 mt-2">
               <div className="text-xs font-semibold text-purple-900 mb-1">Example Use Case:</div>
               <div className="text-xs text-purple-800 space-y-1">
-                <div><strong>Template:</strong> <span className="font-mono">{"Find <<fixed>> near {{location}}"}</span></div>
+                <div><strong>Template:</strong> <span className="font-mono">Find {"<<fixed>>"} near {{location}}</span></div>
                 <div><strong>Embed URL:</strong> <span className="font-mono">/embed/form?...&fixed=birria tacos</span></div>
                 <div><strong>Result:</strong> User sees location field only, but prompt says "Find birria tacos near [location]"</div>
               </div>

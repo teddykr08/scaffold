@@ -35,40 +35,13 @@ function EmbedFormInner() {
     const taskName = taskNameParam;
 
     async function fetchFields() {
-      // First fetch task details to see if form is enabled
-      const tDetailRes = await fetch(`/api/tasks/${encodeURIComponent(taskName)}?app_id=${encodeURIComponent(appId)}`);
-      const tDetail = await tDetailRes.json();
-      const taskHasForm = tDetail?.task?.has_form ?? true;
-
-      if (!taskHasForm) {
-        // If task is formless, auto-generate prompt immediately and skip fetching fields
-        const res = await fetch("/api/generate-prompt", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            app_id: appId,
-            task_name: taskName,
-            field_values: {},
-            fixed_content: fixedContent || null,
-          }),
-        });
-
-        const data = await res.json();
-        if (data?.success) {
-          setGeneratedPrompt(data.prompt);
-          setStatus("✅ Prompt generated (formless task)");
-        } else {
-          setStatus(`❌ ${data?.error || "Unknown error"}`);
-        }
-
-        setGlobalFields([]);
-        setTaskFields([]);
-        return;
-      }
-
       const [gRes, tRes] = await Promise.all([
         fetch(`/api/global-fields?app_id=${encodeURIComponent(appId)}`),
-        fetch(`/api/task-fields?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(taskName)}`),
+        fetch(
+          `/api/task-fields?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(
+            taskName
+          )}`
+        ),
       ]);
 
       const gData = await gRes.json();
