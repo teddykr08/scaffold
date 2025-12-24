@@ -101,49 +101,20 @@ export default function TaskEditor({ params }: { params: { app_id: string, task_
                 </div>
               </div>
 
-                  <div>
-                    <DragDropContext
-                      onDragEnd={async (result: DropResult) => {
-                        if (!result.destination) return;
-                        const src = result.source.index;
-                        const dest = result.destination.index;
-                        const arr = Array.from(fields);
-                        const [moved] = arr.splice(src, 1);
-                        arr.splice(dest, 0, moved);
-                        // update order values
-                        const updates = arr.map((f, i) => ({ id: f.id, order: i + 1 }));
-                        const res = await fetch('/api/task-fields', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ updates }) });
-                        const data = await res.json();
-                        if (data.success) {
-                          setFields(arr.map((f, i) => ({ ...f, order: i + 1 })));
-                        }
-                      }}
-                    >
-                      <Droppable droppableId="fields-droppable">
-                        {(provided) => (
-                          <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-2">
-                            {fields.map((f, index) => (
-                              <Draggable key={f.id} draggableId={String(f.id)} index={index}>
-                                {(providedDraggable) => (
-                                  <div ref={providedDraggable.innerRef} {...providedDraggable.draggableProps} {...providedDraggable.dragHandleProps} className="flex items-center justify-between border p-2 rounded">
-                                    <div>
-                                      <div className="font-medium">{f.field_label}</div>
-                                      <div className="text-xs text-gray-500 font-mono">{{`{{${f.field_name}}}`}}</div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <button onClick={() => moveField(f.id, 'up')} className="px-2">↑</button>
-                                      <button onClick={() => moveField(f.id, 'down')} className="px-2">↓</button>
-                                      <button className="px-2 text-red-600">Delete</button>
-                                    </div>
-                                  </div>
-                                )}
-                              </Draggable>
-                            ))}
-                            {provided.placeholder}
-                          </div>
-                        )}
-                      </Droppable>
-                    </DragDropContext>
+                  <div className="space-y-2">
+                    {fields.map((f, index) => (
+                      <div key={f.id} className="flex items-center justify-between border p-2 rounded">
+                        <div>
+                          <div className="font-medium">{f.field_label}</div>
+                          <div className="text-xs text-gray-500 font-mono">{{`{{${f.field_name}}}`}}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => moveField(f.id, 'up')} className="px-2">↑</button>
+                          <button onClick={() => moveField(f.id, 'down')} className="px-2">↓</button>
+                          <button className="px-2 text-red-600">Delete</button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
             </div>
           )}
