@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const { app_id, name, description, system_header, has_form } = body;
+    const { app_id, name, description, system_header } = body;
 
     if (!app_id || !name?.trim()) {
       return NextResponse.json(
@@ -97,7 +97,6 @@ export async function POST(req: NextRequest) {
         name: name.trim(),
         description: description || null,
         system_header: system_header || null,
-        has_form: has_form === undefined ? true : has_form,
       })
       .select()
       .single();
