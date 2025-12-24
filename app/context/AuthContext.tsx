@@ -50,17 +50,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const signUp = async (email: string, password: string) => {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-
-        // Developer convenience: in non-production environments, attempt to sign in
-        // immediately so local testing isn't blocked by email confirmation.
-        try {
-            if (process.env.NODE_ENV !== 'production') {
-                await supabase.auth.signInWithPassword({ email, password });
-            }
-        } catch (e) {
-            // ignore sign-in errors here; the user may still need to verify email
-            console.warn('Dev auto sign-in failed', e);
-        }
     };
 
     const signInWithGoogle = async () => {
