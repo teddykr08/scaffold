@@ -800,7 +800,7 @@ export default function BuilderPage() {
                   {prodEmbedUrlHint}&fixed=your+context+here
                 </div>
                 <div className="text-blue-700 mt-2">
-                  Replace "your+context+here" with the dynamic content. Use + for spaces or %20.
+                  Replace <span className="font-mono">your+context+here</span> with the dynamic content. Use + for spaces or %20.
                 </div>
               </div>
             </>
@@ -940,7 +940,7 @@ Provide the top 3 results with:
               <div className="text-xs text-purple-800 space-y-1">
                 <div><strong>Template:</strong> <span className="font-mono">{"Find <<fixed>> near {{location}}"}</span></div>
                 <div><strong>Embed URL:</strong> <span className="font-mono">/embed/form?...&fixed=birria tacos</span></div>
-                <div><strong>Result:</strong> User sees location field only, but prompt says "Find birria tacos near [location]"</div>
+                <div><strong>Result:</strong> User sees location field only, but prompt says <span className="font-mono">Find birria tacos near [location]</span></div>
               </div>
             </div>
             <p className="text-xs text-purple-700 mt-2">
