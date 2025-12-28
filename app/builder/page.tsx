@@ -304,28 +304,6 @@ export default function BuilderPage() {
     }
   }
 
-  useEffect(() => {
-    refreshApps();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!selectedAppId) return;
-    setTasks([]);
-    setTemplates([]);
-    refreshTasks();
-    refreshTemplates(selectedAppId, selectedTaskName);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAppId]);
-
-  useEffect(() => {
-    if (!selectedAppId || !selectedTaskName) return;
-    setTaskFields([]);
-    refreshTaskFields(selectedAppId, selectedTaskName);
-    refreshTemplates(selectedAppId, selectedTaskName);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTaskName, selectedAppId]);
-
   async function createApp() {
     setStatus("");
     const res = await fetch("/api/apps", {
@@ -933,7 +911,7 @@ export default function BuilderPage() {
               purpose="The blueprint for the AI."
               whatItDoes="Combines your system header, user inputs (variables), and fixed text into a final message for ChatGPT."
               whenToUse="Edit this to control exactly what the AI sees and how it behaves."
-              important={"You MUST click \"Save template\" at least once! If you do not, the embed form will fail with \"No template found\"."}
+              important={`You MUST click "Save template" at least once! If you do not, the embed form will fail with "No template found".`}
             />
           </h2>
           <div className="mt-2 rounded-lg bg-green-50 border border-green-200 p-4 text-sm">
