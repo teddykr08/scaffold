@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const { app_id, name, description, system_header } = body;
+    const { app_id, name } = body;
 
     if (!app_id || !name?.trim()) {
       return NextResponse.json(
@@ -95,8 +95,6 @@ export async function POST(req: NextRequest) {
       .insert({
         app_id,
         name: name.trim(),
-        description: description || null,
-        system_header: system_header || null,
       })
       .select()
       .single();

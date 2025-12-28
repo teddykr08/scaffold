@@ -15,7 +15,7 @@ export default function Page() {
 
         <div className="flex justify-center gap-6">
           <Link
-            href="/docs/free"
+            href="/login"
             className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800"
           >
             Get Started (FREE)

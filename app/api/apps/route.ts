@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    const { name, system_header } = body;
+    const { name } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabaseServer
       .from("apps")
-      .insert([{ name, system_header: system_header || null }])
+      .insert([{ name }])
       .select()
       .single();
 

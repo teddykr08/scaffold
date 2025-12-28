@@ -21,7 +21,6 @@ function EmbedFormInner() {
   const taskNameParam = searchParams.get("task_name");
   const fixedContent = searchParams.get("fixed");
 
-  const [globalFields, setGlobalFields] = useState<FieldRow[]>([]);
   const [taskFields, setTaskFields] = useState<FieldRow[]>([]);
   const [values, setValues] = useState<Record<string, string>>({});
   const [status, setStatus] = useState("");
@@ -35,27 +34,21 @@ function EmbedFormInner() {
     const taskName = taskNameParam;
 
     async function fetchFields() {
-      const [gRes, tRes] = await Promise.all([
-        fetch(`/api/global-fields?app_id=${encodeURIComponent(appId)}`),
-        fetch(
-          `/api/task-fields?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(
-            taskName
-          )}`
-        ),
-      ]);
+      const tRes = await fetch(
+        `/api/task-fields?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(
+          taskName
+        )}`
+      );
 
-      const gData = await gRes.json();
       const tData = await tRes.json();
 
-      const gFields: FieldRow[] = gData.success ? gData.fields || [] : [];
       const tFields: FieldRow[] = tData.success ? tData.fields || [] : [];
 
-      setGlobalFields(gFields);
       setTaskFields(tFields);
 
       // Apply defaults
       const defaults: Record<string, string> = {};
-      [...gFields, ...tFields].forEach((f) => {
+      tFields.forEach((f) => {
         if (f.default_value) {
           defaults[f.field_name] = f.default_value;
         }
@@ -78,7 +71,7 @@ function EmbedFormInner() {
     const appId = appIdParam;
     const taskName = taskNameParam;
 
-    const allFields = [...globalFields, ...taskFields].filter(f => f.field_type !== "runtime");
+    const allFields = taskFields.filter(f => f.field_type !== "runtime");
 
     for (const field of allFields) {
       if (field.required) {
@@ -205,7 +198,6 @@ function EmbedFormInner() {
         <h1 className="text-2xl font-bold">Scaffold Form</h1>
 
         <div className="mt-6 space-y-4">
-          {globalFields.filter(f => f.field_type !== "runtime").map(renderField)}
           {taskFields.filter(f => f.field_type !== "runtime").map(renderField)}
         </div>
 

@@ -31,20 +31,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Fetch system header
-    const { data: app, error: appError } = await supabase
-      .from("apps")
-      .select("system_header")
-      .eq("id", app_id)
-      .single();
-
-    if (appError || !app) {
-      return NextResponse.json(
-        { success: false, error: "App not found" },
-        { status: 404 }
-      );
-    }
-
     // Fetch template
     const { data: templateRows, error: templateError } = await supabase
       .from("prompt_templates")
@@ -67,17 +53,7 @@ export async function POST(req: NextRequest) {
     const templateRow = templateRows[0];
 
     // Compose final prompt
-    const parts: string[] = [];
-
-    if (task.system_header?.trim()) {
-      parts.push(task.system_header.trim());
-    } else if (app.system_header?.trim()) {
-      parts.push(app.system_header.trim());
-    }
-
-    parts.push(templateRow.template);
-
-    let finalPrompt = parts.join('\n\n');
+    let finalPrompt = templateRow.template;
 
     // ✅ Replace <<fixed>> placeholder if it exists
     if (fixed_content) {
