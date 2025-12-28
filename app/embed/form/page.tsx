@@ -19,9 +19,11 @@ function EmbedFormInner() {
 
   const appIdParam = searchParams.get("app_id");
   const taskNameParam = searchParams.get("task_name");
-  const fixedContent = searchParams.get("fixed");
+  const fixedContentFromUrl = searchParams.get("fixed");
+  const [localFixedContent, setLocalFixedContent] = useState("");
 
-  const [taskFields, setTaskFields] = useState<FieldRow[]>([]);
+  const [fields, setFields] = useState<FieldRow[]>([]);
+  const [task, setTask] = useState<{ has_form: boolean } | null>(null);
   const [values, setValues] = useState<Record<string, string>>({});
   const [status, setStatus] = useState("");
   const [generatedPrompt, setGeneratedPrompt] = useState("");
@@ -33,18 +35,24 @@ function EmbedFormInner() {
     const appId = appIdParam;
     const taskName = taskNameParam;
 
-    async function fetchFields() {
+    async function fetchData() {
+      // 1. Fetch Task Info (for has_form)
+      const taskRes = await fetch(`/api/tasks/get?app_id=${encodeURIComponent(appId)}&name=${encodeURIComponent(taskName)}`);
+      const taskData = await taskRes.json();
+      if (taskData.success) {
+        setTask(taskData.task);
+      }
+
+      // 2. Fetch Task Fields
       const tRes = await fetch(
         `/api/task-fields?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(
           taskName
         )}`
       );
-
       const tData = await tRes.json();
-
       const tFields: FieldRow[] = tData.success ? tData.fields || [] : [];
 
-      setTaskFields(tFields);
+      setFields(tFields.sort((a, b) => a.order - b.order));
 
       // Apply defaults
       const defaults: Record<string, string> = {};
@@ -56,7 +64,7 @@ function EmbedFormInner() {
       setValues(defaults);
     }
 
-    fetchFields();
+    fetchData();
   }, [appIdParam, taskNameParam]);
 
   async function handleSubmit() {
@@ -71,9 +79,9 @@ function EmbedFormInner() {
     const appId = appIdParam;
     const taskName = taskNameParam;
 
-    const allFields = taskFields.filter(f => f.field_type !== "runtime");
+    const allVisibleFields = fields.filter(f => f.field_type !== "runtime");
 
-    for (const field of allFields) {
+    for (const field of allVisibleFields) {
       if (field.required) {
         const val = values[field.field_name];
         if (!val || val.trim() === "") {
@@ -90,7 +98,7 @@ function EmbedFormInner() {
         app_id: appId,
         task_name: taskName,
         field_values: values,
-        fixed_content: fixedContent || null,
+        fixed_content: fixedContentFromUrl || localFixedContent || null,
       }),
     });
 
@@ -195,17 +203,31 @@ function EmbedFormInner() {
   return (
     <main className="min-h-screen bg-white text-gray-900 p-6">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold">Scaffold Form</h1>
-
         <div className="mt-6 space-y-4">
-          {taskFields.filter(f => f.field_type !== "runtime").map(renderField)}
+          {task?.has_form !== false && fields.filter(f => f.field_type !== "runtime").map(renderField)}
+
+          {/* Main Input for <<fixed>> content if not pre-populated in URL */}
+          {!fixedContentFromUrl && (
+            <div className="pt-2">
+              <label className="text-sm font-bold text-gray-900 mb-1 block">
+                {task?.has_form === false ? "Enter your prompt theme/ingredients:" : "Additional Instructions:"}
+              </label>
+              <textarea
+                className="w-full rounded-xl border border-gray-200 bg-gray-50/30 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black transition-all"
+                rows={4}
+                placeholder={task?.has_form === false ? "e.g. Chicken, Spinach, and Cream..." : "Anything else for the AI?"}
+                value={localFixedContent}
+                onChange={(e) => setLocalFixedContent(e.target.value)}
+              />
+            </div>
+          )}
         </div>
 
         <button
-          className="mt-6 rounded-lg bg-black px-6 py-3 text-white hover:bg-gray-800"
+          className="mt-8 w-full rounded-xl bg-black px-6 py-4 text-sm font-bold text-white hover:bg-gray-800 transition-all active:scale-[0.98] shadow-lg shadow-gray-200"
           onClick={handleSubmit}
         >
-          Generate Prompt
+          {status === "generating" ? "Generating..." : "Generate Prompt"}
         </button>
 
         {status && (
@@ -241,8 +263,8 @@ function EmbedFormInner() {
               <button
                 onClick={copyToClipboard}
                 className={`flex items-center justify-center gap-2 rounded-xl px-6 py-4 text-sm font-bold transition-all shadow-lg ${copied
-                    ? "bg-green-600 text-white shadow-green-200 scale-[0.98]"
-                    : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200 hover:shadow-blue-300 active:scale-[0.98]"
+                  ? "bg-green-600 text-white shadow-green-200 scale-[0.98]"
+                  : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200 hover:shadow-blue-300 active:scale-[0.98]"
                   }`}
               >
                 {copied ? (

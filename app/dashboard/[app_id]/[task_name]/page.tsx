@@ -138,6 +138,7 @@ export default function TaskEditorPage() {
   const [template, setTemplate] = useState<string>("You are a [define here]");
   const [templates, setTemplates] = useState<TemplateRow[]>([]);
   const [lastSavedTemplate, setLastSavedTemplate] = useState<string>("");
+  const [globalFields, setGlobalFields] = useState<FieldRow[]>([]);
 
   const embedUrl = useMemo(() => {
     if (!appId || !taskName) return "";
@@ -159,6 +160,7 @@ export default function TaskEditorPage() {
     refreshApp();
     refreshTask();
     refreshTaskFields();
+    refreshGlobalFields();
     refreshTemplates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId, taskName]);
@@ -189,6 +191,15 @@ export default function TaskEditorPage() {
     );
     const data = await safeJson(res);
     if (data?.success) setTaskFields(data.fields || []);
+  }
+
+  async function refreshGlobalFields() {
+    if (!appId) return;
+    const res = await authenticatedFetch(
+      `/api/global-fields?app_id=${encodeURIComponent(appId)}`
+    );
+    const data = await safeJson(res);
+    if (data?.success) setGlobalFields(data.fields || []);
   }
 
   async function refreshTemplates() {
@@ -252,7 +263,7 @@ export default function TaskEditorPage() {
       return;
     }
 
-    const allFields = taskFields;
+    const allFields = [...globalFields, ...taskFields];
     const warning = validateTemplate(template, allFields);
 
     if (warning) {
@@ -411,7 +422,7 @@ export default function TaskEditorPage() {
             <h1 className="text-3xl font-bold">{taskName}</h1>
             <p className="text-gray-600 mt-1">Edit task settings, fields, and prompt template</p>
           </div>
-          <button 
+          <button
             onClick={async () => {
               const supabase = createClient(
                 process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -476,6 +487,20 @@ export default function TaskEditorPage() {
             </div>
 
             <ul className="space-y-2 text-sm">
+              {/* Global Fields */}
+              {globalFields.filter(f => f.field_type !== "runtime").map((f) => (
+                <li key={f.id} className="relative rounded-lg border border-blue-100 bg-blue-50/30 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="font-medium text-blue-900">{f.field_label} <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded ml-2 uppercase font-bold">Global</span></div>
+                    <div className="text-xs text-blue-600">
+                      {f.required ? "required" : "optional"} · {f.field_type} · order {f.order}
+                    </div>
+                  </div>
+                  <div className="mt-1 text-xs text-blue-500 font-mono">{`{{${f.field_name}}}`}</div>
+                </li>
+              ))}
+
+              {/* Task Fields */}
               {taskFields.filter(f => f.field_type !== "runtime").map((f) => (
                 <li key={f.id} className="relative rounded-lg border border-gray-100 p-3">
                   <div className="flex items-center justify-between">
@@ -497,7 +522,7 @@ export default function TaskEditorPage() {
                   </button>
                 </li>
               ))}
-              {!taskFields.filter(f => f.field_type !== "runtime").length && <li className="text-gray-500">No fields yet.</li>}
+              {(!taskFields.filter(f => f.field_type !== "runtime").length && !globalFields.filter(f => f.field_type !== "runtime").length) && <li className="text-gray-500">No fields yet.</li>}
             </ul>
           </div>
         </div>

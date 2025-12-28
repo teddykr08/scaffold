@@ -7,6 +7,8 @@ CREATE INDEX IF NOT EXISTS idx_apps_user_id ON apps(user_id);
 
 -- Create unique constraint on (user_id, name) so each user can have apps with same name
 ALTER TABLE apps 
+DROP CONSTRAINT IF EXISTS apps_user_id_name_unique;
+ALTER TABLE apps 
 ADD CONSTRAINT apps_user_id_name_unique UNIQUE (user_id, name);
 
 -- Drop old unique constraint on name if it exists
@@ -52,6 +54,8 @@ DROP CONSTRAINT IF EXISTS tasks_app_id_name_unique;
 
 -- Add new constraint with user_id
 ALTER TABLE tasks 
+DROP CONSTRAINT IF EXISTS tasks_app_id_name_user_id_unique;
+ALTER TABLE tasks 
 ADD CONSTRAINT tasks_app_id_name_user_id_unique UNIQUE (app_id, name, user_id);
 
 -- Enable RLS on tasks table
@@ -79,6 +83,10 @@ USING (auth.uid() = user_id);
 ALTER TABLE global_fields 
 ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
 
+-- Add options column for select fields
+ALTER TABLE global_fields
+ADD COLUMN IF NOT EXISTS options JSONB;
+
 CREATE INDEX IF NOT EXISTS idx_global_fields_user_id ON global_fields(user_id);
 
 ALTER TABLE global_fields ENABLE ROW LEVEL SECURITY;
@@ -103,6 +111,10 @@ USING (auth.uid() = user_id);
 -- Task fields tied to user through app
 ALTER TABLE task_fields 
 ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
+
+-- Add options column for select fields
+ALTER TABLE task_fields
+ADD COLUMN IF NOT EXISTS options JSONB;
 
 CREATE INDEX IF NOT EXISTS idx_task_fields_user_id ON task_fields(user_id);
 

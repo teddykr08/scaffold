@@ -16,8 +16,8 @@
 
 When a new user signs up, they automatically get:
 
-**Study Tutor** - Subject, Grade Level, Learning Style  
-**Lawyer** - Case Type, Jurisdiction, Urgency Level  
+**Study Tutor** - Subject (fixed), Grade Level, Learning Style  
+**Lawyer** - Case Type (fixed), Jurisdiction/Area, Urgency Level  
 **Personal Trainer** - Fitness Level, Goals, Injuries/Limitations
 
 Each app has a custom prompt template with field variables.

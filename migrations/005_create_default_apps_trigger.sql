@@ -3,61 +3,91 @@
 
 -- Create a function that initializes default apps with fields and templates for a new user
 CREATE OR REPLACE FUNCTION create_default_apps_for_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER 
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 DECLARE
   study_tutor_app_id UUID;
-  lawyer_app_id UUID;
+  recipe_app_id UUID;
   personal_trainer_app_id UUID;
 BEGIN
   -- Create 3 default test apps for the new user
   INSERT INTO apps (name, user_id, created_at)
   VALUES 
     ('Study Tutor', NEW.id, now()),
-    ('Lawyer', NEW.id, now()),
+    ('Recipe Genius', NEW.id, now()),
     ('Personal Trainer', NEW.id, now())
-  RETURNING id INTO study_tutor_app_id, lawyer_app_id, personal_trainer_app_id;
+  ON CONFLICT DO NOTHING;
 
-  -- Get the actual app IDs from the insert
+  -- Get the actual app IDs 
   SELECT id INTO study_tutor_app_id FROM apps WHERE name = 'Study Tutor' AND user_id = NEW.id LIMIT 1;
-  SELECT id INTO lawyer_app_id FROM apps WHERE name = 'Lawyer' AND user_id = NEW.id LIMIT 1;
+  SELECT id INTO recipe_app_id FROM apps WHERE name = 'Recipe Genius' AND user_id = NEW.id LIMIT 1;
   SELECT id INTO personal_trainer_app_id FROM apps WHERE name = 'Personal Trainer' AND user_id = NEW.id LIMIT 1;
 
-  -- STUDY TUTOR APP - Global Fields
-  INSERT INTO global_fields (app_id, user_id, name, field_type, created_at)
-  VALUES 
-    (study_tutor_app_id, NEW.id, 'Subject', 'text', now()),
-    (study_tutor_app_id, NEW.id, 'Grade Level', 'select', now()),
-    (study_tutor_app_id, NEW.id, 'Learning Style', 'select', now());
+  -- STUDY TUTOR APP
+  IF study_tutor_app_id IS NOT NULL THEN
+    INSERT INTO tasks (app_id, user_id, name, has_form, created_at)
+    VALUES (study_tutor_app_id, NEW.id, 'explain_topic', true, now())
+    ON CONFLICT DO NOTHING;
 
-  -- STUDY TUTOR APP - Prompt Template
-  INSERT INTO prompt_templates (app_id, user_id, name, template, created_at)
-  VALUES (study_tutor_app_id, NEW.id, 'Default', 'You are an expert study tutor specialized in {subject} for {grade_level} students. Your teaching style matches {learning_style} learning preferences. Create clear, engaging explanations with examples.', now());
+    INSERT INTO task_fields (app_id, user_id, task_name, field_name, field_label, field_type, required, "order", options, created_at)
+    VALUES 
+      (study_tutor_app_id, NEW.id, 'explain_topic', 'subject', 'Subject', 'text', true, 1, null, now()),
+      (study_tutor_app_id, NEW.id, 'explain_topic', 'grade_level', 'Grade Level', 'select', true, 2, '["Middle School", "High School", "College"]'::jsonb, now())
+    ON CONFLICT DO NOTHING;
 
-  -- LAWYER APP - Global Fields
-  INSERT INTO global_fields (app_id, user_id, name, field_type, created_at)
-  VALUES 
-    (lawyer_app_id, NEW.id, 'Case Type', 'text', now()),
-    (lawyer_app_id, NEW.id, 'Jurisdiction', 'text', now()),
-    (lawyer_app_id, NEW.id, 'Urgency Level', 'select', now());
+    INSERT INTO prompt_templates (app_id, user_id, task_name, template, created_at)
+    VALUES (study_tutor_app_id, NEW.id, 'explain_topic', 'You are an expert tutor. Subject: {{subject}}, Grade: {{grade_level}}. Explain this topic simply: <<fixed>>', now())
+    ON CONFLICT DO NOTHING;
+  END IF;
 
-  -- LAWYER APP - Prompt Template
-  INSERT INTO prompt_templates (app_id, user_id, name, template, created_at)
-  VALUES (lawyer_app_id, NEW.id, 'Default', 'You are an expert lawyer and fluent in the law of {jurisdiction}. You specialize in {case_type} cases. Your responses must be legally sound and consider urgency level: {urgency_level}. Provide clear legal guidance.', now());
+  -- RECIPE GENIUS APP (Formless Example)
+  IF recipe_app_id IS NOT NULL THEN
+    INSERT INTO tasks (app_id, user_id, name, has_form, created_at)
+    VALUES (recipe_app_id, NEW.id, 'quick_recipe', false, now())
+    ON CONFLICT DO NOTHING;
 
-  -- PERSONAL TRAINER APP - Global Fields
-  INSERT INTO global_fields (app_id, user_id, name, field_type, created_at)
-  VALUES 
-    (personal_trainer_app_id, NEW.id, 'Fitness Level', 'select', now()),
-    (personal_trainer_app_id, NEW.id, 'Goals', 'text', now()),
-    (personal_trainer_app_id, NEW.id, 'Injuries/Limitations', 'text', now());
+    INSERT INTO prompt_templates (app_id, user_id, task_name, template, created_at)
+    VALUES (recipe_app_id, NEW.id, 'quick_recipe', 'You are a world-class chef. Provide a creative recipe for the following ingredients or theme: <<fixed>>', now())
+    ON CONFLICT DO NOTHING;
+  END IF;
 
-  -- PERSONAL TRAINER APP - Prompt Template
-  INSERT INTO prompt_templates (app_id, user_id, name, template, created_at)
-  VALUES (personal_trainer_app_id, NEW.id, 'Default', 'You are a professional personal trainer with expertise across all fitness levels. Current client fitness level: {fitness_level}, Goals: {goals}, Limitations: {injuries_limitations}. Create personalized, safe, and effective workout and nutrition guidance.', now());
+  -- PERSONAL TRAINER APP
+  IF personal_trainer_app_id IS NOT NULL THEN
+    -- Tasks
+    INSERT INTO tasks (app_id, user_id, name, has_form, created_at)
+    VALUES 
+      (personal_trainer_app_id, NEW.id, 'workout_routine', true, now()),
+      (personal_trainer_app_id, NEW.id, 'create_diet', true, now())
+    ON CONFLICT DO NOTHING;
+
+    -- Working Fields for Workout Routine
+    INSERT INTO task_fields (app_id, user_id, task_name, field_name, field_label, field_type, required, "order", options, created_at)
+    VALUES 
+      (personal_trainer_app_id, NEW.id, 'workout_routine', 'fitness_level', 'Fitness Level', 'select', true, 1, '["Beginner", "Intermediate", "Advanced"]'::jsonb, now()),
+      (personal_trainer_app_id, NEW.id, 'workout_routine', 'goals', 'Goals', 'text', true, 2, null, now())
+    ON CONFLICT DO NOTHING;
+
+    -- Working Fields for Diet
+    INSERT INTO task_fields (app_id, user_id, task_name, field_name, field_label, field_type, required, "order", options, created_at)
+    VALUES 
+      (personal_trainer_app_id, NEW.id, 'create_diet', 'fitness_level', 'Fitness Level', 'select', true, 1, '["Beginner", "Intermediate", "Advanced"]'::jsonb, now()),
+      (personal_trainer_app_id, NEW.id, 'create_diet', 'goals', 'Goals', 'text', true, 2, null, now())
+    ON CONFLICT DO NOTHING;
+
+    -- Templates
+    INSERT INTO prompt_templates (app_id, user_id, task_name, template, created_at)
+    VALUES 
+      (personal_trainer_app_id, NEW.id, 'workout_routine', 'You are a professional personal trainer. Fitness Level: {{fitness_level}}, Goals: {{goals}}. Create a workout for: <<fixed>>', now()),
+      (personal_trainer_app_id, NEW.id, 'create_diet', 'You are a nutritionist. Fitness Level: {{fitness_level}}, Goals: {{goals}}. Create a customized diet plan for: <<fixed>>', now())
+    ON CONFLICT DO NOTHING;
+  END IF;
 
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- Create a trigger that fires when a new user is created in auth.users
 DROP TRIGGER IF EXISTS create_default_apps_trigger ON auth.users;

@@ -40,14 +40,12 @@ Tables affected:
 ✅ Create PostgreSQL trigger function
 ✅ Fires when new user is created
 ✅ Creates 3 apps automatically:
-   • Study Tutor
-   • Lawyer
-   • Personal Trainer
-✅ Creates global fields for each app:
-   • Study Tutor: Subject, Grade Level, Learning Style
-   • Lawyer: Case Type, Jurisdiction, Urgency Level
-   • Personal Trainer: Fitness Level, Goals, Injuries/Limitations
-✅ Creates prompt templates for each app with field variables
+   • Study Tutor (Subject, Grade Level, Learning Style)
+   • Lawyer (Case Type, Jurisdiction/Area, Urgency Level)
+   • Personal Trainer (Fitness Level, Goals, Injuries/Limitations)
+✅ Creates default task for each app with prompt template and field variables
+✅ Tasks created: explain_topic, legal_guidance, workout_plan
+✅ Valid variables: {{subject}}, {{grade_level}}, {{learning_style}}, {{case_type}}, {{jurisdiction}}, {{urgency_level}}, {{fitness_level}}, {{goals}}, {{limitations}}
 ```
 
 ---
