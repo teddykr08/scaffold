@@ -181,24 +181,7 @@ export default function BuilderPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      router.push("/login");
-    }
-  }, [user, loading, router]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
-
+  // --- All Hooks MUST be at top level before any returns ---
   // --- App ---
   const [apps, setApps] = useState<AppRow[]>([]);
   const [selectedAppId, setSelectedAppId] = useState<string>("");
@@ -228,6 +211,47 @@ export default function BuilderPage() {
   const prodEmbedUrlHint = useMemo(() => {
     return embedUrl ? `https://scaffoldtool.vercel.app${embedUrl}` : "";
   }, [embedUrl]);
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login");
+    }
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    refreshApps();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!selectedAppId) return;
+    setTasks([]);
+    setTemplates([]);
+    refreshTasks();
+    refreshTemplates(selectedAppId, selectedTaskName);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAppId]);
+
+  useEffect(() => {
+    if (!selectedAppId || !selectedTaskName) return;
+    setTaskFields([]);
+    refreshTaskFields(selectedAppId, selectedTaskName);
+    refreshTemplates(selectedAppId, selectedTaskName);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTaskName, selectedAppId]);
+
+  // Now we can do conditional returns
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   async function refreshApps() {
     const res = await fetch("/api/apps", { method: "GET" });
@@ -999,7 +1023,7 @@ Provide the top 3 results with:
                     onClick={() => setTemplate(prev => prev + `{{system_header}}`)}
                     className="text-[10px] font-mono bg-gray-200 border border-gray-300 rounded px-1.5 py-0.5 hover:border-gray-400 transition-colors"
                   >
-                    {"{{system_header}}"}
+                    {`{{system_header}}`}
                   </button>
                 </div>
               </div>
