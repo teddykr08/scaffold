@@ -23,6 +23,34 @@ function safeJson(res: Response) {
   });
 }
 
+async function authenticatedFetch(
+  url: string,
+  options: RequestInit & { isPublic?: boolean } = {}
+) {
+  const { isPublic = false, ...fetchOptions } = options;
+
+  if (!isPublic) {
+    // Get the session token from Supabase
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+    );
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session?.access_token) {
+      fetchOptions.headers = {
+        ...fetchOptions.headers,
+        Authorization: `Bearer ${session.access_token}`,
+      };
+    }
+  }
+
+  return fetch(url, fetchOptions);
+}
+
 export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -43,14 +71,14 @@ export default function DashboardPage() {
   }, []);
 
   async function refreshApps() {
-    const res = await fetch("/api/apps", { method: "GET" });
+    const res = await authenticatedFetch("/api/apps", { method: "GET" });
     const data = await safeJson(res);
     if (data?.success) {
       setApps(data.apps || []);
       // Fetch task counts for each app
       const counts: Record<string, number> = {};
       for (const app of data.apps || []) {
-        const tasksRes = await fetch(`/api/tasks?app_id=${encodeURIComponent(app.id)}`);
+        const tasksRes = await authenticatedFetch(`/api/tasks?app_id=${encodeURIComponent(app.id)}`);
         const tasksData = await safeJson(tasksRes);
         counts[app.id] = (tasksData?.tasks || []).length;
       }
@@ -65,7 +93,7 @@ export default function DashboardPage() {
       return;
     }
 
-    const res = await fetch("/api/apps", {
+    const res = await authenticatedFetch("/api/apps", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: newAppName }),

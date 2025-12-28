@@ -20,11 +20,33 @@ export async function GET(req: NextRequest) {
 
     const supabaseServer = getSupabaseServer();
 
+    // Get the authorization token from the header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Get user from token
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     // Fetch templates
     let query = supabaseServer
       .from("prompt_templates")
       .select("*")
-      .eq("app_id", app_id);
+      .eq("app_id", app_id)
+      .eq("user_id", user.id);
 
     if (task_name) {
       query = query.eq("task_name", task_name);
@@ -119,9 +141,45 @@ export async function POST(req: NextRequest) {
 
     const supabaseServer = getSupabaseServer();
 
+    // Get the authorization token from the header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Get user from token
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Verify the app belongs to the user
+    const { data: appData, error: appError } = await supabaseServer
+      .from("apps")
+      .select("id")
+      .eq("id", app_id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (appError || !appData) {
+      return NextResponse.json(
+        { success: false, error: "App not found or you do not have access" },
+        { status: 404 }
+      );
+    }
+
     const { data, error } = await supabaseServer
       .from("prompt_templates")
-      .insert([{ app_id, task_name, template }])
+      .insert([{ app_id, task_name, template, user_id: user.id }])
       .select()
       .single();
 

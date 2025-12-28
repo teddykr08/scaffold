@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabaseServer";
 
-// GET /api/apps/[id] - Get one specific app by ID
+// GET /api/apps/[id] - Get one specific app by ID (only if user owns it)
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -19,10 +19,32 @@ export async function GET(
 
     const supabaseServer = getSupabaseServer();
 
+    // Get the authorization token from the header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Get user from token
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const { data, error } = await supabaseServer
       .from("apps")
       .select("*")
       .eq("id", id)
+      .eq("user_id", user.id)
       .single();
 
     if (error) {

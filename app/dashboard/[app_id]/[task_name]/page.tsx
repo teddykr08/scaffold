@@ -67,6 +67,33 @@ function safeJson(res: Response) {
   });
 }
 
+async function authenticatedFetch(
+  url: string,
+  options: RequestInit & { isPublic?: boolean } = {}
+) {
+  const { isPublic = false, ...fetchOptions } = options;
+
+  if (!isPublic) {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+    );
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session?.access_token) {
+      fetchOptions.headers = {
+        ...fetchOptions.headers,
+        Authorization: `Bearer ${session.access_token}`,
+      };
+    }
+  }
+
+  return fetch(url, fetchOptions);
+}
+
 // ✅ Quality Guardrail Function
 function validateTemplate(template: string, fields: FieldRow[]): string | null {
   const templateVars = [...template.matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1]);
@@ -137,7 +164,7 @@ export default function TaskEditorPage() {
   }, [appId, taskName]);
 
   async function refreshApp() {
-    const res = await fetch("/api/apps", { method: "GET" });
+    const res = await authenticatedFetch("/api/apps", { method: "GET" });
     const data = await safeJson(res);
     if (data?.success) {
       const foundApp = (data.apps || []).find((a: AppRow) => a.id === appId);
@@ -147,7 +174,7 @@ export default function TaskEditorPage() {
 
   async function refreshTask() {
     if (!appId) return;
-    const res = await fetch(`/api/tasks?app_id=${encodeURIComponent(appId)}`);
+    const res = await authenticatedFetch(`/api/tasks?app_id=${encodeURIComponent(appId)}`);
     const data = await safeJson(res);
     if (data?.success) {
       const foundTask = (data.tasks || []).find((t: TaskRow) => t.name === taskName);
@@ -157,7 +184,7 @@ export default function TaskEditorPage() {
 
   async function refreshTaskFields() {
     if (!appId || !taskName) return;
-    const res = await fetch(
+    const res = await authenticatedFetch(
       `/api/task-fields?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(taskName)}`
     );
     const data = await safeJson(res);
@@ -166,7 +193,7 @@ export default function TaskEditorPage() {
 
   async function refreshTemplates() {
     if (!appId || !taskName) return;
-    const res = await fetch(
+    const res = await authenticatedFetch(
       `/api/prompt-templates?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(taskName)}`
     );
     const data = await safeJson(res);
@@ -186,7 +213,7 @@ export default function TaskEditorPage() {
   async function addTaskField(f: Partial<FieldRow>) {
     if (!appId || !taskName) return;
     setStatus("");
-    const res = await fetch("/api/task-fields", {
+    const res = await authenticatedFetch("/api/task-fields", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ app_id: appId, task_name: taskName, ...f }),
@@ -205,7 +232,7 @@ export default function TaskEditorPage() {
     if (!confirm("Are you sure you want to delete this task field?")) return;
 
     setStatus("");
-    const res = await fetch(`/api/task-fields?id=${fieldId}`, {
+    const res = await authenticatedFetch(`/api/task-fields?id=${fieldId}`, {
       method: "DELETE",
     });
     const data = await safeJson(res);
@@ -232,7 +259,7 @@ export default function TaskEditorPage() {
       setStatus(warning);
     }
 
-    const res = await fetch("/api/prompt-templates", {
+    const res = await authenticatedFetch("/api/prompt-templates", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

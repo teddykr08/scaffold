@@ -2,14 +2,37 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabaseServer";
 
-// GET /api/apps - List all apps
-export async function GET() {
+// GET /api/apps - List all apps for the current user
+export async function GET(req: NextRequest) {
   try {
     const supabaseServer = getSupabaseServer();
 
+    // Get the authorization token from the header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Get user from token
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Fetch apps for this user
     const { data, error } = await supabaseServer
       .from("apps")
       .select("*")
+      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -67,7 +90,7 @@ export async function GET() {
   }
 }
 
-// POST /api/apps - Create a new app
+// POST /api/apps - Create a new app for the current user
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -84,9 +107,30 @@ export async function POST(req: NextRequest) {
     // Get server client (lazy-loaded with service role key)
     const supabaseServer = getSupabaseServer();
 
+    // Get the authorization token from the header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Get user from token
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const { data, error } = await supabaseServer
       .from("apps")
-      .insert([{ name }])
+      .insert([{ name, user_id: user.id }])
       .select()
       .single();
 

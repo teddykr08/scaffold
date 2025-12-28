@@ -20,10 +20,32 @@ export async function GET(req: NextRequest) {
 
     const supabaseServer = getSupabaseServer();
 
+    // Get the authorization token from the header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Get user from token
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
     const { data, error } = await supabaseServer
       .from("global_fields")
       .select("*")
       .eq("app_id", app_id)
+      .eq("user_id", user.id)
       .order("order", { ascending: true });
 
     if (error) {
@@ -125,12 +147,49 @@ export async function POST(req: NextRequest) {
 
     const supabaseServer = getSupabaseServer();
 
+    // Get the authorization token from the header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Get user from token
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Verify the app belongs to the user
+    const { data: appData, error: appError } = await supabaseServer
+      .from("apps")
+      .select("id")
+      .eq("id", app_id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (appError || !appData) {
+      return NextResponse.json(
+        { success: false, error: "App not found or you do not have access" },
+        { status: 404 }
+      );
+    }
+
     // Prepare the data to insert
     const fieldData: Record<string, unknown> = {
       app_id,
       field_name,
       field_label,
       field_type,
+      user_id: user.id,
       required: required ?? false,
       order: order ?? 0,
     };

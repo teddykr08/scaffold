@@ -2,10 +2,31 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabaseServer";
 
-// GET /api/tasks - Get all tasks
+// GET /api/tasks - Get all tasks for user's app
 export async function GET(req: NextRequest) {
   try {
     const supabaseServer = getSupabaseServer();
+
+    // Get the authorization token from the header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Get user from token
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
 
     const { searchParams } = new URL(req.url);
     const appId = searchParams.get('app_id');
@@ -16,6 +37,9 @@ export async function GET(req: NextRequest) {
     if (appId) {
       query = query.eq('app_id', appId);
     }
+
+    // Always filter by user_id for security
+    query = query.eq('user_id', user.id);
 
     const { data, error } = await query.order('created_at', { ascending: false });
 
@@ -90,11 +114,48 @@ export async function POST(req: NextRequest) {
 
     const supabaseServer = getSupabaseServer();
 
+    // Get the authorization token from the header
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Get user from token
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
+    
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Verify the app belongs to the user
+    const { data: appData, error: appError } = await supabaseServer
+      .from("apps")
+      .select("id")
+      .eq("id", app_id)
+      .eq("user_id", user.id)
+      .single();
+
+    if (appError || !appData) {
+      return NextResponse.json(
+        { success: false, error: "App not found or you do not have access" },
+        { status: 404 }
+      );
+    }
+
     const { data, error } = await supabaseServer
       .from("tasks")
       .insert({
         app_id,
         name: name.trim(),
+        user_id: user.id,
       })
       .select()
       .single();
@@ -114,7 +175,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error: "A task with this name already exists",
+            error: "A task with this name already exists in this app",
             details: error.message,
           },
           { status: 409 }

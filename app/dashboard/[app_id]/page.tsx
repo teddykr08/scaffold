@@ -55,6 +55,33 @@ function safeJson(res: Response) {
   });
 }
 
+async function authenticatedFetch(
+  url: string,
+  options: RequestInit & { isPublic?: boolean } = {}
+) {
+  const { isPublic = false, ...fetchOptions } = options;
+
+  if (!isPublic) {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+    );
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session?.access_token) {
+      fetchOptions.headers = {
+        ...fetchOptions.headers,
+        Authorization: `Bearer ${session.access_token}`,
+      };
+    }
+  }
+
+  return fetch(url, fetchOptions);
+}
+
 export default function AppDetailPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
@@ -83,7 +110,7 @@ export default function AppDetailPage() {
   }, [appId]);
 
   async function refreshApp() {
-    const res = await fetch("/api/apps", { method: "GET" });
+    const res = await authenticatedFetch("/api/apps", { method: "GET" });
     const data = await safeJson(res);
     if (data?.success) {
       const foundApp = (data.apps || []).find((a: AppRow) => a.id === appId);
@@ -93,7 +120,7 @@ export default function AppDetailPage() {
 
   async function refreshTasks() {
     if (!appId) return;
-    const res = await fetch(`/api/tasks?app_id=${encodeURIComponent(appId)}`);
+    const res = await authenticatedFetch(`/api/tasks?app_id=${encodeURIComponent(appId)}`);
     const data = await safeJson(res);
     if (data?.success) {
       setTasks(data.tasks || []);
@@ -119,7 +146,7 @@ export default function AppDetailPage() {
       return;
     }
 
-    const res = await fetch("/api/tasks", {
+    const res = await authenticatedFetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
