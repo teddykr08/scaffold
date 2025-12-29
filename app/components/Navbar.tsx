@@ -65,7 +65,7 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
           <Link href="/how-it-works" className="hover:text-black transition-colors">How It Works</Link>
           <Link href="/faq" className="hover:text-black transition-colors">FAQ</Link>
-          <Link href="/pricing" className="hover:text-black transition-colors">Pricing</Link>
+          <Link href="/pricing" className="hover:text-black transition-colors">Pricing(it&apos;s free)</Link>
           <Link href="/contact" className="hover:text-black transition-colors">Contact</Link>
         </div>
 
@@ -73,7 +73,7 @@ export default function Navbar() {
         <div className="flex items-center gap-4">
           {!user ? (
             <Link
-              href="/login"
+              href="/login?mode=signup"
               className="px-4 py-2 text-sm font-medium bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
             >
               Sign In

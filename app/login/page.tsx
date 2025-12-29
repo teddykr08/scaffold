@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
-    const [isSignUp, setIsSignUp] = useState(false);
+function LoginContent() {
+    const searchParams = useSearchParams();
+    const mode = searchParams.get("mode");
+    const [isSignUp, setIsSignUp] = useState(mode === "signup");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -13,6 +15,12 @@ export default function LoginPage() {
 
     const { signIn, signUp, signInWithGoogle, signInWithGitHub } = useAuth();
     const router = useRouter();
+
+    useEffect(() => {
+        if (mode === "signup") {
+            setIsSignUp(true);
+        }
+    }, [mode]);
 
     async function handleEmailAuth(e: React.FormEvent) {
         e.preventDefault();
@@ -47,11 +55,18 @@ export default function LoginPage() {
     }
 
     return (
-        <main className="min-h-screen bg-white flex items-center justify-center p-6">
+        <main className="min-h-screen bg-white flex items-center justify-center p-6 text-gray-900">
             <div className="w-full max-w-md">
-                <h1 className="text-3xl font-bold text-center mb-8">
-                    {isSignUp ? "Create Account" : "Welcome Back"}
-                </h1>
+                <div className="text-center mb-8">
+                    <h1 className="text-3xl font-bold">
+                        {isSignUp ? "Create Account" : "Welcome Back"}
+                    </h1>
+                    {isSignUp && (
+                        <p className="text-sm text-gray-500 mt-1 font-normal opacity-70 scale-90">
+                            we&apos;re happy to have you
+                        </p>
+                    )}
+                </div>
 
                 {error && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
@@ -63,7 +78,7 @@ export default function LoginPage() {
                     <button
                         onClick={() => handleSocialAuth("google")}
                         disabled={loading}
-                        className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                        className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
                     >
                         <svg width="20" height="20" viewBox="0 0 20 20">
                             <path fill="#4285F4" d="M19.6 10.23c0-.82-.1-1.42-.25-2.05H10v3.72h5.5c-.15.96-.74 2.31-2.04 3.22v2.45h3.16c1.89-1.73 2.98-4.3 2.98-7.34z" />
@@ -77,7 +92,7 @@ export default function LoginPage() {
                     <button
                         onClick={() => handleSocialAuth("github")}
                         disabled={loading}
-                        className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                        className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
                     >
                         <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
                             <path fillRule="evenodd" d="M10 0C4.477 0 0 4.484 0 10.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0110 4.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.203 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.942.359.31.678.921.678 1.856 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0020 10.017C20 4.484 15.522 0 10 0z" clipRule="evenodd" />
@@ -88,7 +103,7 @@ export default function LoginPage() {
 
                 <div className="relative mb-6">
                     <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-300"></div>
+                        <div className="w-full border-t border-gray-200"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
                         <span className="px-2 bg-white text-gray-500">Or continue with email</span>
@@ -105,7 +120,7 @@ export default function LoginPage() {
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black transition-all"
                         />
                     </div>
 
@@ -119,14 +134,14 @@ export default function LoginPage() {
                             onChange={(e) => setPassword(e.target.value)}
                             required
                             minLength={6}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black transition-all"
                         />
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 disabled:opacity-50"
+                        className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 disabled:opacity-50 font-bold transition-all shadow-md active:scale-95"
                     >
                         {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
                     </button>
@@ -136,12 +151,20 @@ export default function LoginPage() {
                     {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
                     <button
                         onClick={() => setIsSignUp(!isSignUp)}
-                        className="text-black font-medium hover:underline"
+                        className="text-black font-bold hover:underline"
                     >
                         {isSignUp ? "Sign In" : "Sign Up"}
                     </button>
                 </p>
             </div>
         </main>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={<div>Loading...</div>}>
+            <LoginContent />
+        </Suspense>
     );
 }

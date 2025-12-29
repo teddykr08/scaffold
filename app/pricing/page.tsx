@@ -8,7 +8,7 @@ export default function PricingPage() {
             <div className="max-w-5xl mx-auto">
                 <div className="text-center mb-16">
                     <h1 className="text-4xl font-bold text-gray-900 mb-4 tracking-tight">Simple, Transparent Pricing</h1>
-                    <p className="text-xl text-gray-600">Choose the plan that's right for your app.</p>
+                    <p className="text-xl text-gray-600">Choose the plan that&apos;s right for your app.</p>
                 </div>
 
                 <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
@@ -29,15 +29,11 @@ export default function PricingPage() {
                             </li>
                             <li className="flex items-center gap-3">
                                 <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                                <span className="text-gray-700 font-medium">Copy/paste prompts</span>
-                            </li>
-                            <li className="flex items-center gap-3">
-                                <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                                <span className="text-gray-700 font-medium">"Powered by Scaffold" watermark</span>
+                                <span className="text-gray-700 font-medium">&quot;Powered by Scaffold&quot; watermark (it&apos;s tiny dw)</span>
                             </li>
                         </ul>
 
-                        <Link href="/login" className="block w-full text-center py-4 bg-gray-100 text-gray-900 rounded-xl font-bold hover:bg-gray-200 transition-colors">
+                        <Link href="/login?mode=signup" className="block w-full text-center py-4 bg-gray-100 text-gray-900 rounded-xl font-bold hover:bg-gray-200 transition-colors">
                             Get Started
                         </Link>
                     </div>
@@ -49,7 +45,7 @@ export default function PricingPage() {
                         </div>
                         <h2 className="text-2xl font-bold mb-2">PRO</h2>
                         <p className="text-gray-400 mb-6 font-medium">For professional applications</p>
-                        <div className="text-4xl font-bold mb-8">$29<span className="text-lg font-normal text-gray-400">/mo</span></div>
+                        <div className="text-4xl font-bold mb-8">$9.99<span className="text-lg font-normal text-gray-400">/mo</span></div>
 
                         <ul className="space-y-4 mb-8 flex-grow">
                             <li className="flex items-center gap-3">
@@ -70,9 +66,14 @@ export default function PricingPage() {
                             </li>
                         </ul>
 
-                        <button className="w-full py-4 bg-white text-black rounded-xl font-bold hover:bg-gray-100 transition-colors shadow-lg">
+                        <a
+                            href="https://docs.google.com/forms/d/e/1FAIpQLSec7H4vX8_GH7sf7ObaYR2NPjrJAxQtDC_r6Yny2HRcw0ZHfg/viewform?usp=header"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block w-full py-4 bg-white text-black text-center rounded-xl font-bold hover:bg-gray-100 transition-colors shadow-lg"
+                        >
                             Join Waitlist
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>

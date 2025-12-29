@@ -7,6 +7,7 @@ export default function HowItWorks() {
         <div className="min-h-screen bg-white py-20 px-6">
             <div className="max-w-3xl mx-auto">
                 <h1 className="text-4xl font-bold mb-8 tracking-tight text-gray-900 text-center">How it Works</h1>
+                <h2 className="text-2xl font-bold text-gray-800 text-center mb-4 leading-tight">We give your app all the power and convenience of AI, but for FREE</h2>
 
                 <div className="prose prose-lg text-gray-700 mx-auto">
                     <p className="text-xl mb-12 text-center text-gray-600 leading-relaxed">
@@ -47,7 +48,7 @@ export default function HowItWorks() {
 
                     <div className="mt-20 text-center p-12 bg-gray-50 rounded-3xl border border-gray-100">
                         <h2 className="text-2xl font-bold mb-4">Ready to start?</h2>
-                        <Link href="/login" className="inline-block px-8 py-4 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-all shadow-xl hover:shadow-2xl">
+                        <Link href="/login?mode=signup" className="inline-block px-8 py-4 bg-black text-white rounded-xl font-bold hover:bg-gray-800 transition-all shadow-xl hover:shadow-2xl">
                             Build your first app
                         </Link>
                     </div>
