@@ -355,7 +355,7 @@ export default function TaskEditorPage() {
 
                 <div className="mt-8">
                     <button
-                        className="w-full md:w-auto rounded-xl bg-black px-8 py-3 text-white font-bold hover:bg-gray-800 transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
+                        className="w-full md:w-auto rounded-xl bg-scaffold-brand px-8 py-3 text-black font-graffiti text-lg hover:bg-scaffold-brandHover transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
                         disabled={!label.trim()}
                         onClick={() =>
                             onAdd({
@@ -404,8 +404,8 @@ export default function TaskEditorPage() {
                     </Link>
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                         <div>
-                            <h1 className="text-5xl font-extrabold tracking-tighter text-black">{taskName}</h1>
-                            <p className="text-gray-500 mt-2 text-lg font-medium">Configure fields and prompt logic</p>
+                            <h1 className="font-graffiti text-6xl tracking-tighter text-black">{taskName}</h1>
+                            <p className="text-gray-500 mt-2 text-lg font-medium uppercase">Configure fields and prompt logic</p>
                         </div>
                     </div>
                 </div>
@@ -536,9 +536,9 @@ export default function TaskEditorPage() {
                                     Tip: Use <code className="bg-gray-100 px-1 rounded text-gray-700">{"{{field_name}}"}</code> to inject form data.
                                 </div>
                                 <button
-                                    className={`rounded-xl px-10 py-4 text-white font-bold transition-all shadow-lg ${template === lastSavedTemplate
+                                    className={`rounded-xl px-10 py-4 text-black font-graffiti text-lg transition-all shadow-lg ${template === lastSavedTemplate
                                         ? "bg-gray-300 cursor-not-allowed shadow-none"
-                                        : "bg-black hover:bg-gray-800 hover:shadow-xl active:scale-95"
+                                        : "bg-scaffold-brand hover:bg-scaffold-brandHover hover:shadow-xl active:scale-95"
                                         }`}
                                     onClick={saveTemplate}
                                     disabled={template === lastSavedTemplate}

@@ -191,7 +191,7 @@ export default function AppDetailPage() {
                     </Link>
                     <div className="flex justify-between items-end">
                         <div>
-                            <h1 className="text-4xl font-bold tracking-tight text-black">{app?.name || "App"}</h1>
+                            <h1 className="font-graffiti text-5xl tracking-tight text-black">{app?.name || "App"}</h1>
                             <p className="text-gray-500 mt-1 font-medium">
                                 {tasks.length} task{tasks.length !== 1 ? "s" : ""}
                             </p>
@@ -225,7 +225,7 @@ export default function AppDetailPage() {
                                 </div>
                             </div>
                             <button
-                                className="mt-6 w-full rounded-lg bg-black text-white py-2.5 font-medium hover:bg-gray-800 transition-colors"
+                                className="mt-6 w-full rounded-lg bg-scaffold-brand text-black py-2.5 font-graffiti hover:bg-scaffold-brandHover transition-colors"
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     router.push(`/builder/${appId}/${task.name}`);
@@ -241,7 +241,7 @@ export default function AppDetailPage() {
                         <div className="text-4xl text-gray-400 mb-3">+</div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">New Task</h3>
                         <button
-                            className="w-full rounded-lg bg-black text-white py-2 text-sm font-semibold hover:bg-gray-800 transition-colors"
+                            className="w-full rounded-lg bg-scaffold-brand text-black py-2 font-graffiti text-sm hover:bg-scaffold-brandHover transition-colors"
                         >
                             Create
                         </button>
@@ -274,7 +274,7 @@ export default function AppDetailPage() {
                                 </button>
                                 <button
                                     onClick={createTask}
-                                    className="flex-1 rounded-xl bg-black text-white px-4 py-3 font-semibold hover:bg-gray-800 transition-colors"
+                                    className="flex-1 rounded-xl bg-scaffold-brand text-black px-4 py-3 font-graffiti hover:bg-scaffold-brandHover transition-colors"
                                 >
                                     Create Task
                                 </button>

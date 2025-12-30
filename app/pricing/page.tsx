@@ -7,7 +7,7 @@ export default function PricingPage() {
         <div className="min-h-screen bg-gray-50 py-20 px-6">
             <div className="max-w-5xl mx-auto">
                 <div className="text-center mb-16">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-4 tracking-tight">Simple, Transparent Pricing</h1>
+                    <h1 className="font-graffiti text-5xl text-gray-900 mb-4 tracking-tight">Simple, Transparent Pricing</h1>
                     <p className="text-xl text-gray-600">Choose the plan that&apos;s right for your app.</p>
                 </div>
 
@@ -33,7 +33,7 @@ export default function PricingPage() {
                             </li>
                         </ul>
 
-                        <Link href="/login?mode=signup" className="block w-full text-center py-4 bg-gray-100 text-gray-900 rounded-xl font-bold hover:bg-gray-200 transition-colors">
+                        <Link href="/login?mode=signup" className="block w-full text-center py-4 bg-scaffold-brand text-black rounded-xl font-graffiti hover:bg-scaffold-brandHover transition-colors">
                             Get Started
                         </Link>
                     </div>
@@ -70,7 +70,7 @@ export default function PricingPage() {
                             href="https://docs.google.com/forms/d/e/1FAIpQLSec7H4vX8_GH7sf7ObaYR2NPjrJAxQtDC_r6Yny2HRcw0ZHfg/viewform?usp=header"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="block w-full py-4 bg-white text-black text-center rounded-xl font-bold hover:bg-gray-100 transition-colors shadow-lg"
+                            className="block w-full py-4 bg-white text-black text-center rounded-xl font-graffiti text-lg hover:bg-gray-100 transition-colors shadow-lg"
                         >
                             Join Waitlist
                         </a>
@@ -80,3 +80,4 @@ export default function PricingPage() {
         </div>
     );
 }
+

@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 export default function Navbar() {
   const { user, signOut } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -57,24 +58,34 @@ export default function Navbar() {
     <header className="w-full border-b border-gray-200 bg-white sticky top-0 z-50">
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
         {/* Left: Logo */}
-        <Link href="/" className="text-xl font-bold tracking-tight text-black flex items-center gap-2">
-          Scaffold
+        <Link href="/" className="flex items-center gap-2">
+          <span className="font-graffiti text-2xl text-black">scaffold</span>
         </Link>
 
-        {/* Center: Links */}
-        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-gray-600">
+        {/* Center: Links (Desktop) */}
+        <div className="hidden md:flex items-center gap-8 text-lg font-normal font-graffiti text-gray-600">
           <Link href="/how-it-works" className="hover:text-black transition-colors">How It Works</Link>
           <Link href="/faq" className="hover:text-black transition-colors">FAQ</Link>
           <Link href="/pricing" className="hover:text-black transition-colors">Pricing(it&apos;s free)</Link>
           <Link href="/contact" className="hover:text-black transition-colors">Contact</Link>
         </div>
 
-        {/* Right: Auth */}
+        {/* Right: Auth & Mobile Toggle */}
         <div className="flex items-center gap-4">
+          <button
+            className="md:hidden p-2 text-gray-600 hover:text-black focus:outline-none"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            ) : (
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            )}
+          </button>
           {!user ? (
             <Link
               href="/login?mode=signup"
-              className="px-4 py-2 text-sm font-medium bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+              className="px-4 py-2 text-sm bg-scaffold-brand text-black rounded-lg font-graffiti hover:bg-scaffold-brandHover transition-colors"
             >
               Sign In
             </Link>
@@ -144,6 +155,28 @@ export default function Navbar() {
           )}
         </div>
       </nav>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-gray-100 bg-white animate-in slide-in-from-top duration-200">
+          <div className="flex flex-col p-6 gap-4 text-xl font-graffiti text-gray-600">
+            <Link href="/how-it-works" onClick={() => setMobileMenuOpen(false)} className="hover:text-black">How It Works</Link>
+            <Link href="/faq" onClick={() => setMobileMenuOpen(false)} className="hover:text-black">FAQ</Link>
+            <Link href="/pricing" onClick={() => setMobileMenuOpen(false)} className="hover:text-black">Pricing</Link>
+            <Link href="/contact" onClick={() => setMobileMenuOpen(false)} className="hover:text-black">Contact</Link>
+            {!user && (
+              <Link
+                href="/login?mode=signup"
+                onClick={() => setMobileMenuOpen(false)}
+                className="mt-4 px-6 py-3 bg-scaffold-brand text-black rounded-xl text-center font-bold"
+              >
+                Sign In
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }
+

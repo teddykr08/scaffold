@@ -12,6 +12,14 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        scaffold: {
+          brand: '#fdcd13',      // brand yellow
+          brandHover: '#e5b811',
+          steel: '#455A64',      // metal gray
+        },
+      },
+      fontFamily: {
+        graffiti: ['var(--font-graffiti)', 'cursive'],
       },
     },
   },

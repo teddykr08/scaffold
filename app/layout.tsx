@@ -1,6 +1,15 @@
+import { Sedgwick_Ave, Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
+
+const inter = Inter({ subsets: ["latin"] });
+
+const graffiti = Sedgwick_Ave({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-graffiti'
+})
 
 export const metadata = {
   title: "Scaffold",
@@ -13,8 +22,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="bg-white text-gray-900">
+    <html lang="en" className={`${graffiti.variable}`}>
+      <body className={`${inter.className} bg-white text-gray-900`}>
         <AuthProvider>
           <Navbar />
           {children}

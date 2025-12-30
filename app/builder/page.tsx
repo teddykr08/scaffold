@@ -122,7 +122,7 @@ export default function BuilderDashboardPage() {
       <div className="max-w-6xl mx-auto px-6 py-10">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold">Projects</h1>
+          <h1 className="font-graffiti text-4xl">Dashboard</h1>
           <p className="text-gray-600 mt-1">Manage your AI form projects</p>
         </div>
 
@@ -145,7 +145,7 @@ export default function BuilderDashboardPage() {
                 <p className="text-sm text-gray-500 mt-1">{taskCounts[app.id] || 0} tasks</p>
               </div>
               <button
-                className="mt-6 w-full rounded-lg bg-black text-white py-2.5 font-medium hover:bg-gray-800 transition-colors"
+                className="mt-6 w-full rounded-lg bg-scaffold-brand text-black py-2.5 font-graffiti hover:bg-scaffold-brandHover transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   router.push(`/builder/${app.id}`);
@@ -177,7 +177,7 @@ export default function BuilderDashboardPage() {
                   e.stopPropagation();
                   createApp();
                 }}
-                className="w-full rounded-lg bg-black text-white py-2 text-sm font-semibold hover:bg-gray-800 transition-colors"
+                className="w-full rounded-lg bg-scaffold-brand text-black py-2 font-graffiti text-sm hover:bg-scaffold-brandHover transition-colors"
               >
                 Create
               </button>
@@ -188,3 +188,4 @@ export default function BuilderDashboardPage() {
     </main>
   );
 }
+

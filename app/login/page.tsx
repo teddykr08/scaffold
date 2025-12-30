@@ -58,7 +58,7 @@ function LoginContent() {
         <main className="min-h-screen bg-white flex items-center justify-center p-6 text-gray-900">
             <div className="w-full max-w-md">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold">
+                    <h1 className="font-graffiti text-4xl">
                         {isSignUp ? "Create Account" : "Welcome Back"}
                     </h1>
                     {isSignUp && (
@@ -141,7 +141,7 @@ function LoginContent() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 disabled:opacity-50 font-bold transition-all shadow-md active:scale-95"
+                        className="w-full bg-scaffold-brand text-black py-3 rounded-lg hover:bg-scaffold-brandHover disabled:opacity-50 font-graffiti text-lg transition-all shadow-md active:scale-95"
                     >
                         {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
                     </button>
@@ -168,3 +168,4 @@ export default function LoginPage() {
         </Suspense>
     );
 }
+

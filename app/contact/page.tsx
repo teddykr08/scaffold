@@ -4,7 +4,7 @@ export default function ContactPage() {
     return (
         <div className="min-h-screen bg-white py-20 px-6">
             <div className="max-w-4xl mx-auto flex flex-col items-center">
-                <h1 className="text-4xl font-bold mb-4 tracking-tight text-gray-900">Contact Us</h1>
+                <h1 className="font-graffiti text-5xl mb-4 tracking-tight text-gray-900 uppercase">Contact Us</h1>
                 <p className="text-gray-600 mb-16 text-center max-w-xl text-xl">
                     Have questions or feedback? Fill out the form below and we&apos;ll get back to you as soon as possible.
                 </p>
@@ -37,3 +37,4 @@ export default function ContactPage() {
         </div>
     );
 }
+
