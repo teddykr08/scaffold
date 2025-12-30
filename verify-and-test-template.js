@@ -18,7 +18,7 @@ async function fetchJSON(url, options = {}) {
         ...options.headers,
       },
     });
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       let errorData;
@@ -29,7 +29,7 @@ async function fetchJSON(url, options = {}) {
       }
       throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData)}`);
     }
-    
+
     return await response.json();
   } catch (error) {
     if (error.message.includes("fetch failed") || error.message.includes("ECONNREFUSED")) {
@@ -54,7 +54,7 @@ async function verifyAndUpdate() {
     console.log("📡 Step 1: Fetching templates...");
     const getUrl = `${API_BASE}/prompt-templates?app_id=${APP_ID}`;
     console.log(`   GET ${getUrl}\n`);
-    
+
     const getResult = await fetchJSON(getUrl);
 
     if (!getResult.success) {
@@ -99,7 +99,7 @@ async function verifyAndUpdate() {
 
       for (const template of rowsToUpdate) {
         console.log(`   Updating template ID: ${template.id}`);
-        
+
         const patchUrl = `${API_BASE}/prompt-templates`;
         const patchResult = await fetchJSON(patchUrl, {
           method: "PATCH",
@@ -161,12 +161,10 @@ async function testGeneratePrompt() {
     const testData = {
       app_id: APP_ID,
       task_name: EXPECTED_TASK_NAME,
-      global_values: {
+      task_values: {
         user_name: "John Doe",
         job_title: "Software Engineer",
         company: "Tech Corp",
-      },
-      task_values: {
         email_tone: "professional",
         email_recipient: "client@example.com",
         email_subject: "Project Update",

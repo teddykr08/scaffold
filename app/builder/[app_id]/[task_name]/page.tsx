@@ -120,7 +120,6 @@ export default function TaskEditorPage() {
     const [template, setTemplate] = useState<string>("You are a [define here]");
     const [templates, setTemplates] = useState<TemplateRow[]>([]);
     const [lastSavedTemplate, setLastSavedTemplate] = useState<string>("");
-    const [globalFields, setGlobalFields] = useState<FieldRow[]>([]);
 
     const embedUrl = useMemo(() => {
         if (!appId || !taskName) return "";
@@ -142,7 +141,6 @@ export default function TaskEditorPage() {
         refreshApp();
         refreshTask();
         refreshTaskFields();
-        refreshGlobalFields();
         refreshTemplates();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [appId, taskName]);
@@ -175,14 +173,7 @@ export default function TaskEditorPage() {
         if (data?.success) setTaskFields(data.fields || []);
     }
 
-    async function refreshGlobalFields() {
-        if (!appId) return;
-        const res = await authenticatedFetch(
-            `/api/global-fields?app_id=${encodeURIComponent(appId)}`
-        );
-        const data = await safeJson(res);
-        if (data?.success) setGlobalFields(data.fields || []);
-    }
+
 
     async function refreshTemplates() {
         if (!appId || !taskName) return;
@@ -245,7 +236,7 @@ export default function TaskEditorPage() {
             return;
         }
 
-        const allFields = [...globalFields, ...taskFields];
+        const allFields = [...taskFields];
         const warning = validateTemplate(template, allFields);
 
         if (warning) {
@@ -296,12 +287,14 @@ export default function TaskEditorPage() {
                     <div className="font-bold text-lg text-gray-900">
                         Add New Field
                     </div>
-                    <div className="text-xs bg-white px-2 py-1 rounded border border-gray-200 text-gray-500 font-mono">order: {nextOrder}</div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Label</label>
+                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">
+                            Label
+                            <span className="block text-[10px] normal-case font-medium text-gray-400 mt-0.5">this will be in the question field on the form</span>
+                        </label>
                         <input
                             className="w-full rounded-xl border border-gray-300 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-black"
                             value={label}
@@ -431,9 +424,18 @@ export default function TaskEditorPage() {
                                 Copy this URL to iframe the form into your website.
                             </p>
 
-                            <div className="rounded-xl bg-gray-50 border border-gray-200 p-4 font-mono text-sm break-all select-all hover:bg-gray-100 transition-colors cursor-pointer" title="Click to select all">
-                                {embedUrl || "Loading..."}
-                            </div>
+                            <textarea
+                                readOnly
+                                className="w-full rounded-xl bg-gray-50 border border-gray-200 p-4 font-mono text-xs h-32 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                value={embedUrl ? `<iframe
+  src="https://scaffoldtool.vercel.app${embedUrl}"
+  width="100%"
+  height="600"
+  frameborder="0">
+</iframe>` : "Loading..."}
+                                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                                title="Click to select all"
+                            />
 
                             {prodEmbedUrlHint && (
                                 <div className="mt-6 rounded-2xl bg-blue-50/50 border border-blue-100 p-6">
@@ -458,42 +460,30 @@ export default function TaskEditorPage() {
                             <div className="rounded-2xl border border-gray-200 p-8 shadow-sm">
                                 <h2 className="font-bold text-xl mb-6 flex items-center gap-2">
                                     Active Fields
-                                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">{taskFields.length + globalFields.length}</span>
+                                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">{taskFields.length}</span>
                                 </h2>
 
                                 <div className="space-y-3">
-                                    {/* Global Fields */}
-                                    {globalFields.filter(f => f.field_type !== "runtime").map((f) => (
-                                        <div key={f.id} className="group relative rounded-xl border border-blue-100 bg-blue-50/20 p-4 transition-all hover:border-blue-200">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <div className="font-bold text-blue-900 flex items-center gap-2 uppercase text-xs tracking-wider">
-                                                    {f.field_label}
-                                                    <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded font-black">Global</span>
-                                                </div>
-                                                <div className="text-[10px] text-blue-500 font-bold">
-                                                    {f.required ? "REQUIRED" : "OPTIONAL"} · {f.field_type.toUpperCase()} · ORD {f.order}
-                                                </div>
-                                            </div>
-                                            <div className="text-xs text-blue-400 font-mono">{`{{${f.field_name}}}`}</div>
-                                        </div>
-                                    ))}
+
 
                                     {/* Task Fields */}
                                     {taskFields.filter(f => f.field_type !== "runtime").map((f) => (
-                                        <div key={f.id} className="group relative rounded-xl border border-gray-200 p-4 transition-all hover:border-gray-400 hover:shadow-sm">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <div className="font-bold text-gray-900 uppercase text-xs tracking-wider">{f.field_label}</div>
-                                                <div className="text-[10px] text-gray-500 font-bold">
-                                                    {f.required ? "REQUIRED" : "OPTIONAL"} · {f.field_type.toUpperCase()} · ORD {f.order}
+                                        <div key={f.id} className="group relative rounded-xl border border-gray-200 p-4 pr-14 transition-all hover:border-gray-400 hover:shadow-sm flex items-center justify-between">
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <div className="font-bold text-gray-900 uppercase text-xs tracking-wider">{f.field_label}</div>
+                                                    <div className="text-[10px] text-gray-500 font-bold">
+                                                        {f.required ? "REQUIRED" : "OPTIONAL"} · {f.field_type.toUpperCase()}
+                                                    </div>
                                                 </div>
+                                                <div className="text-xs text-gray-400 font-mono">{`{{${f.field_name}}}`}</div>
                                             </div>
-                                            <div className="text-xs text-gray-400 font-mono">{`{{${f.field_name}}}`}</div>
                                             <button
                                                 onClick={() => deleteTaskField(f.id)}
-                                                className="absolute top-4 right-4 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                className="absolute top-1/2 -translate-y-1/2 right-4 text-gray-400 hover:text-red-500 transition-colors"
                                                 title="Delete field"
                                             >
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                                     <polyline points="3 6 5 6 21 6"></polyline>
                                                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                                 </svg>
@@ -501,7 +491,7 @@ export default function TaskEditorPage() {
                                         </div>
                                     ))}
 
-                                    {(!taskFields.filter(f => f.field_type !== "runtime").length && !globalFields.filter(f => f.field_type !== "runtime").length) && (
+                                    {(!taskFields.filter(f => f.field_type !== "runtime").length) && (
                                         <div className="text-center py-10 border-2 border-dashed border-gray-100 rounded-2xl">
                                             <p className="text-gray-400 font-medium">No fields added yet. Add your first field above!</p>
                                         </div>
@@ -522,6 +512,56 @@ export default function TaskEditorPage() {
                                 </div>
                             </div>
 
+                            {/* Example */}
+                            <div className="mb-6 rounded-xl bg-blue-50/50 border border-blue-100 p-5">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                    <span className="text-xs font-black uppercase tracking-widest text-blue-600">Example</span>
+                                </div>
+                                <p className="text-sm text-blue-900 font-medium mb-2">Taco Finder Task</p>
+                                <div className="bg-white/60 rounded-lg p-3 font-mono text-xs text-blue-800 leading-relaxed">
+                                    You are a taco expert. Help me find the best tacos.<br />
+                                    Location: {`{{location}}`}<br />
+                                    Preferred style: {`{{taco_style}}`}<br />
+                                    <br />
+                                    Provide 3 recommendations with addresses.
+                                </div>
+                            </div>
+
+                            {/* Field Usage Sidebar */}
+                            <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50/30 p-5">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Available Fields</h3>
+                                    <span className="text-[10px] text-gray-400 font-mono">Click to copy</span>
+                                </div>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    {taskFields.filter(f => f.field_type !== "runtime").map((f) => {
+                                        const isUsed = template.includes(`{{${f.field_name}}}`);
+                                        return (
+                                            <button
+                                                key={f.id}
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(`{{${f.field_name}}}`);
+                                                    setStatus(`✅ Copied {{${f.field_name}}}}`);
+                                                    setTimeout(() => setStatus(""), 2000);
+                                                }}
+                                                className={`text-left px-3 py-2 rounded-lg border text-xs font-mono transition-all hover:scale-105 active:scale-95 ${isUsed
+                                                        ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                                                        : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                                                    }`}
+                                                title={isUsed ? 'Used in template' : 'Not used in template'}
+                                            >
+                                                <div className="flex items-center gap-1.5">
+                                                    <div className={`w-1.5 h-1.5 rounded-full ${isUsed ? 'bg-green-500' : 'bg-red-400'}`}></div>
+                                                    <span className="truncate">{f.field_label}</span>
+                                                </div>
+                                                <div className="text-[10px] opacity-60 mt-0.5">{`{{${f.field_name}}}`}</div>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
                             <div className="relative group">
                                 <textarea
                                     className="w-full rounded-2xl border border-gray-300 p-6 font-mono text-sm leading-relaxed focus:ring-4 focus:ring-black/5 focus:border-black outline-none transition-all resize-y min-h-[300px] bg-gray-50/30 group-hover:bg-white"
@@ -531,20 +571,33 @@ export default function TaskEditorPage() {
                                 />
                             </div>
 
-                            <div className="mt-8 flex items-center justify-between">
-                                <div className="text-xs text-gray-400">
-                                    Tip: Use <code className="bg-gray-100 px-1 rounded text-gray-700">{"{{field_name}}"}</code> to inject form data.
+                            <div className="mt-8 flex flex-col items-end gap-3">
+                                <div className="flex items-center justify-between w-full">
+                                    <div className="text-xs text-gray-400">
+                                        Tip: Use <code className="bg-gray-100 px-1 rounded text-gray-700">{"{{field_name}}"}</code> to inject form data.
+                                    </div>
+                                    <button
+                                        className={`rounded-xl px-10 py-4 text-black font-graffiti text-lg transition-all shadow-lg ${template === lastSavedTemplate
+                                            ? "bg-gray-300 cursor-not-allowed shadow-none"
+                                            : "bg-scaffold-brand hover:bg-scaffold-brandHover hover:shadow-xl active:scale-95"
+                                            }`}
+                                        onClick={saveTemplate}
+                                        disabled={template === lastSavedTemplate}
+                                    >
+                                        {template === lastSavedTemplate ? "Saved" : "Save"}
+                                    </button>
                                 </div>
-                                <button
-                                    className={`rounded-xl px-10 py-4 text-black font-graffiti text-lg transition-all shadow-lg ${template === lastSavedTemplate
-                                        ? "bg-gray-300 cursor-not-allowed shadow-none"
-                                        : "bg-scaffold-brand hover:bg-scaffold-brandHover hover:shadow-xl active:scale-95"
-                                        }`}
-                                    onClick={saveTemplate}
-                                    disabled={template === lastSavedTemplate}
-                                >
-                                    {template === lastSavedTemplate ? "Saved" : "Save Logic"}
-                                </button>
+                                {prodEmbedUrlHint && (
+                                    <a
+                                        href={prodEmbedUrlHint}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm font-bold text-gray-400 hover:text-black flex items-center gap-1 transition-colors"
+                                    >
+                                        Open Form Preview
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                    </a>
+                                )}
                             </div>
                         </div>
                     </div>

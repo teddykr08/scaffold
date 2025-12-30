@@ -5,7 +5,7 @@ import { getSupabaseServer } from "@/lib/supabaseServer";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { app_id, task_name, global_values = {}, task_values = {}, field_values = {}, runtime_context = {}, fixed_content } = body;
+    const { app_id, task_name, task_values = {}, field_values = {}, runtime_context = {}, fixed_content } = body;
 
     if (!app_id || !task_name) {
       return NextResponse.json(
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Combine all values
-    const allValues = { ...global_values, ...task_values, ...field_values, ...runtime_context };
+    const allValues = { ...task_values, ...field_values, ...runtime_context };
 
     // Replace values
     for (const [key, value] of Object.entries(allValues)) {

@@ -79,34 +79,7 @@ CREATE POLICY IF NOT EXISTS "Users can delete own tasks"
 ON tasks FOR DELETE
 USING (auth.uid() = user_id);
 
--- Global fields tied to user through app
-ALTER TABLE global_fields 
-ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
 
--- Add options column for select fields
-ALTER TABLE global_fields
-ADD COLUMN IF NOT EXISTS options JSONB;
-
-CREATE INDEX IF NOT EXISTS idx_global_fields_user_id ON global_fields(user_id);
-
-ALTER TABLE global_fields ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY IF NOT EXISTS "Users can view own global fields"
-ON global_fields FOR SELECT
-USING (auth.uid() = user_id);
-
-CREATE POLICY IF NOT EXISTS "Users can create global fields"
-ON global_fields FOR INSERT
-WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY IF NOT EXISTS "Users can update own global fields"
-ON global_fields FOR UPDATE
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY IF NOT EXISTS "Users can delete own global fields"
-ON global_fields FOR DELETE
-USING (auth.uid() = user_id);
 
 -- Task fields tied to user through app
 ALTER TABLE task_fields 

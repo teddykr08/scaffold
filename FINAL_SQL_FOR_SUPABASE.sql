@@ -108,41 +108,7 @@ CREATE POLICY "Users can delete own tasks"
 ON tasks FOR DELETE
 USING (auth.uid() = user_id);
 
--- ============================================================================
--- Add user_id to global_fields table
-ALTER TABLE global_fields 
-ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
 
--- Add options column for select fields
-ALTER TABLE global_fields
-ADD COLUMN IF NOT EXISTS options JSONB;
-
-CREATE INDEX IF NOT EXISTS idx_global_fields_user_id ON global_fields(user_id);
-
-ALTER TABLE global_fields ENABLE ROW LEVEL SECURITY;
-
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Users can view own global fields" ON global_fields;
-DROP POLICY IF EXISTS "Users can create global fields" ON global_fields;
-DROP POLICY IF EXISTS "Users can update own global fields" ON global_fields;
-DROP POLICY IF EXISTS "Users can delete own global fields" ON global_fields;
-
-CREATE POLICY "Users can view own global fields"
-ON global_fields FOR SELECT
-USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can create global fields"
-ON global_fields FOR INSERT
-WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own global fields"
-ON global_fields FOR UPDATE
-USING (auth.uid() = user_id)
-WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can delete own global fields"
-ON global_fields FOR DELETE
-USING (auth.uid() = user_id);
 
 -- ============================================================================
 -- Add user_id to task_fields table
@@ -230,7 +196,7 @@ SET search_path = public
 AS $$
 DECLARE
   study_tutor_app_id UUID;
-  lawyer_app_id UUID;
+  recipe_genius_app_id UUID;
   personal_trainer_app_id UUID;
 BEGIN
   -- Create 3 default test apps for the new user
@@ -238,7 +204,6 @@ BEGIN
   INSERT INTO apps (name, user_id, created_at)
   VALUES 
     ('Study Tutor', NEW.id, now()),
-    ('Lawyer', NEW.id, now()),
     ('Personal Trainer', NEW.id, now())
   ON CONFLICT DO NOTHING;
 
@@ -251,7 +216,7 @@ BEGIN
   VALUES ('Recipe Genius', NEW.id, now())
   ON CONFLICT DO NOTHING;
   
-  SELECT id INTO lawyer_app_id FROM apps WHERE name = 'Recipe Genius' AND user_id = NEW.id LIMIT 1;
+  SELECT id INTO recipe_genius_app_id FROM apps WHERE name = 'Recipe Genius' AND user_id = NEW.id LIMIT 1;
 
   -- STUDY TUTOR APP
   IF study_tutor_app_id IS NOT NULL THEN
@@ -272,13 +237,13 @@ BEGIN
   END IF;
 
   -- RECIPE GENIUS APP (Formless mode: has_form = false)
-  IF lawyer_app_id IS NOT NULL THEN
+  IF recipe_genius_app_id IS NOT NULL THEN
     INSERT INTO tasks (app_id, user_id, name, has_form, created_at)
-    VALUES (lawyer_app_id, NEW.id, 'quick_recipe', false, now())
+    VALUES (recipe_genius_app_id, NEW.id, 'quick_recipe', false, now())
     ON CONFLICT DO NOTHING;
 
     INSERT INTO prompt_templates (app_id, user_id, task_name, template, created_at)
-    VALUES (lawyer_app_id, NEW.id, 'quick_recipe', 'You are a world-class chef. Provide a creative recipe for the following ingredients or theme: <<fixed>>', now())
+    VALUES (recipe_genius_app_id, NEW.id, 'quick_recipe', 'You are a world-class chef. Provide a creative recipe for the following ingredients or theme: <<fixed>>', now())
     ON CONFLICT DO NOTHING;
   END IF;
 
@@ -346,20 +311,20 @@ EXECUTE FUNCTION create_default_apps_for_user();
 --
 -- Test with new user (create new user via Supabase Auth, then check):
 -- SELECT name FROM apps WHERE user_id = '<new_user_id>';
--- (Should show: Study Tutor, Lawyer, Personal Trainer)
+-- (Should show: Study Tutor, Personal Trainer, Recipe Genius)
 
 -- ============================================================================
 -- MIGRATION COMPLETE
 -- ============================================================================
 -- Summary:
--- ✅ Added user_id columns to: apps, tasks, global_fields, task_fields, prompt_templates
+-- ✅ Added user_id columns to: apps, tasks, task_fields, prompt_templates
 -- ✅ Enabled RLS on all tables with 4 policies per table (SELECT, INSERT, UPDATE, DELETE)
 -- ✅ Updated unique constraints to include user_id
 -- ✅ Created indexes on user_id columns
 -- ✅ Created trigger function to generate default apps with fields and templates
 -- ✅ Each new user gets:
 --    - Study Tutor app with: Subject, Grade Level, Learning Style fields
---    - Lawyer app with: Case Type, Jurisdiction, Urgency Level fields
+--    - Recipe Genius app (Formless mode) with custom template
 --    - Personal Trainer app with: Fitness Level, Goals, Injuries/Limitations fields
 --    - Each app has a custom default prompt template
 -- 

@@ -16,8 +16,8 @@
 
 When a new user signs up, they automatically get:
 
-**Study Tutor** - Subject (fixed), Grade Level, Learning Style  
-**Lawyer** - Case Type (fixed), Jurisdiction/Area, Urgency Level  
+**Study Tutor** - Subject, Grade Level
+**Recipe Genius** - Fast AI recipes (no form)
 **Personal Trainer** - Fitness Level, Goals, Injuries/Limitations
 
 Each app has a custom prompt template with field variables.
@@ -38,7 +38,7 @@ Push your updated code to production:
 1. Create new user in Supabase Auth
 2. Wait 2-3 seconds
 3. Check `apps` table - should see 3 default apps
-4. Check `global_fields` table - should see fields for each app
+4. Check `task_fields` table - should see fields for each app
 5. Check `prompt_templates` table - should see templates
 
 ---
@@ -49,6 +49,6 @@ Push your updated code to production:
 
 **Trigger not creating apps?** - Make sure the entire SQL ran without errors. Test by creating a new user.
 
-**Can't see fields/templates?** - Check that `global_fields` and `prompt_templates` tables got populated.
+**Can't see fields/templates?** - Check that `task_fields` and `prompt_templates` tables got populated.
 
 See `CHANGES_SUMMARY.md` for code details or `USER_ISOLATION_GUIDE.md` for implementation details.

@@ -17,10 +17,10 @@ export async function GET(req: NextRequest) {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    
+
     // Get user from token
     const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
-    
+
     if (userError || !user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
@@ -117,10 +117,10 @@ export async function POST(req: NextRequest) {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    
+
     // Get user from token
     const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
-    
+
     if (userError || !user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
@@ -202,3 +202,58 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// DELETE /api/apps?id=...
+export async function DELETE(req: NextRequest) {
+  try {
+    const supabaseServer = getSupabaseServer();
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Missing id" },
+        { status: 400 }
+      );
+    }
+
+    const authHeader = req.headers.get("authorization");
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Delete the app (CASCADE will handle related records)
+    const { error } = await supabaseServer
+      .from("apps")
+      .delete()
+      .eq("id", id)
+      .eq("user_id", user.id);
+
+    if (error) {
+      return NextResponse.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("[apps] DELETE error:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}

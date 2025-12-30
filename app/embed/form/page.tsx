@@ -67,6 +67,15 @@ function EmbedFormInner() {
     fetchData();
   }, [appIdParam, taskNameParam]);
 
+  // Auto-generate prompt for formless tasks (has_form = false)
+  useEffect(() => {
+    if (task?.has_form === false && !generatedPrompt && appIdParam && taskNameParam) {
+      // Auto-submit for formless tasks
+      handleSubmit();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [task, appIdParam, taskNameParam]);
+
   async function handleSubmit() {
     setStatus("");
     setGeneratedPrompt("");
@@ -210,12 +219,13 @@ function EmbedFormInner() {
           {!fixedContentFromUrl && (
             <div className="pt-2">
               <label className="text-sm font-bold text-gray-900 mb-1 block">
-                {task?.has_form === false ? "Enter your prompt theme/ingredients:" : "Additional Instructions:"}
+                {task?.has_form === false ? "Enter your prompt theme/ingredients:" : "Additional Instructions"}
+                {task?.has_form !== false && <span className="text-gray-400 font-normal ml-1">(optional)</span>}
               </label>
               <textarea
                 className="w-full rounded-xl border border-gray-200 bg-gray-50/30 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black transition-all"
                 rows={4}
-                placeholder={task?.has_form === false ? "e.g. Chicken, Spinach, and Cream..." : "Anything else for the AI?"}
+                placeholder={task?.has_form === false ? "e.g. Chicken, Spinach, and Cream..." : "Any extra context or preferences? (optional)"}
                 value={localFixedContent}
                 onChange={(e) => setLocalFixedContent(e.target.value)}
               />
@@ -223,12 +233,15 @@ function EmbedFormInner() {
           )}
         </div>
 
-        <button
-          className="mt-8 w-full rounded-xl bg-black px-6 py-4 text-sm font-bold text-white hover:bg-gray-800 transition-all active:scale-[0.98] shadow-lg shadow-gray-200"
-          onClick={handleSubmit}
-        >
-          {status === "generating" ? "Generating..." : "Generate Prompt"}
-        </button>
+        {/* Only show Generate button for tasks with forms */}
+        {task?.has_form !== false && (
+          <button
+            className="mt-8 w-full rounded-xl bg-black px-6 py-4 text-sm font-bold text-white hover:bg-gray-800 transition-all active:scale-[0.98] shadow-lg shadow-gray-200"
+            onClick={handleSubmit}
+          >
+            {status === "generating" ? "Generating..." : "Generate Prompt"}
+          </button>
+        )}
 
         {status && (
           <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm">
@@ -298,6 +311,19 @@ function EmbedFormInner() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Powered by scaffold footer */}
+      <div className="fixed bottom-4 right-4 z-50">
+        <a
+          href="https://scaffoldtool.vercel.app"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-gray-400 hover:text-gray-600 transition-colors font-medium flex items-center gap-1.5 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full border border-gray-200 shadow-sm hover:shadow-md"
+        >
+          <span>powered by</span>
+          <span className="font-graffiti text-sm text-black">scaffold</span>
+        </a>
       </div>
     </main>
   );

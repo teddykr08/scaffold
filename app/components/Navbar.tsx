@@ -3,35 +3,19 @@
 import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export default function Navbar() {
   const { user, signOut } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const pathname = usePathname();
 
-  // Load dark mode from localStorage
-  useEffect(() => {
-    const savedMode = localStorage.getItem("darkMode") === "true";
-    setDarkMode(savedMode);
-    if (savedMode) {
-      document.documentElement.classList.add("dark");
-    }
-  }, []);
-
-  const toggleDarkMode = () => {
-    const newMode = !darkMode;
-    setDarkMode(newMode);
-    localStorage.setItem("darkMode", newMode.toString());
-    if (newMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  };
+  // Pages where nav links should be visible
+  const publicPages = ["/", "/how-it-works", "/faq", "/pricing", "/contact"];
+  const showNavLinks = publicPages.includes(pathname || "");
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -62,26 +46,29 @@ export default function Navbar() {
           <span className="font-graffiti text-2xl text-black">scaffold</span>
         </Link>
 
-        {/* Center: Links (Desktop) */}
-        <div className="hidden md:flex items-center gap-8 text-lg font-normal font-graffiti text-gray-600">
-          <Link href="/how-it-works" className="hover:text-black transition-colors">How It Works</Link>
-          <Link href="/faq" className="hover:text-black transition-colors">FAQ</Link>
-          <Link href="/pricing" className="hover:text-black transition-colors">Pricing(it&apos;s free)</Link>
-          <Link href="/contact" className="hover:text-black transition-colors">Contact</Link>
-        </div>
+        {/* Center: Links (Desktop) - Only show on public marketing pages */}
+        {showNavLinks && (
+          <div className="hidden md:flex items-center gap-8 text-lg font-normal font-graffiti text-gray-600">
+            <Link href="/how-it-works" className="hover:text-black transition-colors">How It Works</Link>
+            <Link href="/faq" className="hover:text-black transition-colors">FAQ</Link>
+            <Link href="/pricing" className="hover:text-black transition-colors">Pricing(it&apos;s free)</Link>
+            <Link href="/contact" className="hover:text-black transition-colors">Contact</Link>
+          </div>
+        )}
 
-        {/* Right: Auth & Mobile Toggle */}
         <div className="flex items-center gap-4">
-          <button
-            className="md:hidden p-2 text-gray-600 hover:text-black focus:outline-none"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-            )}
-          </button>
+          {showNavLinks && (
+            <button
+              className="md:hidden p-2 text-gray-600 hover:text-black focus:outline-none"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+              )}
+            </button>
+          )}
           {!user ? (
             <Link
               href="/login?mode=signup"
@@ -123,21 +110,6 @@ export default function Navbar() {
                     Dashboard
                   </Link>
 
-                  <button
-                    onClick={toggleDarkMode}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center justify-between transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                      </svg>
-                      Dark Mode
-                    </div>
-                    <div className={`w-8 h-4 rounded-full transition-colors relative ${darkMode ? 'bg-black' : 'bg-gray-200'}`}>
-                      <div className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform ${darkMode ? 'translate-x-4' : ''}`} />
-                    </div>
-                  </button>
-
                   <div className="h-px bg-gray-100 my-1" />
 
                   <button
@@ -156,8 +128,8 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
+      {/* Mobile Menu Overlay - Only show on public marketing pages */}
+      {mobileMenuOpen && showNavLinks && (
         <div className="md:hidden border-t border-gray-100 bg-white animate-in slide-in-from-top duration-200">
           <div className="flex flex-col p-6 gap-4 text-xl font-graffiti text-gray-600">
             <Link href="/how-it-works" onClick={() => setMobileMenuOpen(false)} className="hover:text-black">How It Works</Link>

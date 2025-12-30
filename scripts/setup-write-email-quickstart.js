@@ -30,10 +30,11 @@ async function setup() {
   console.log(`Using Scaffold URL: ${Scaffold_URL}\n`);
 
   try {
-    // Step 1: Create global field: user_name
-    console.log('Creating global field: user_name...');
-    await makeRequest('/api/global-fields', 'POST', {
+    // Step 1: Create task field: user_name
+    console.log('Creating task field: user_name...');
+    await makeRequest('/api/task-fields', 'POST', {
       app_id: APP_ID,
+      task_name: 'write_email',
       field_name: 'user_name',
       field_label: 'Your Name',
       field_type: 'text',
@@ -42,10 +43,11 @@ async function setup() {
     });
     console.log('✓ Created user_name field\n');
 
-    // Step 2: Create global field: job_title
-    console.log('Creating global field: job_title...');
-    await makeRequest('/api/global-fields', 'POST', {
+    // Step 2: Create task field: job_title
+    console.log('Creating task field: job_title...');
+    await makeRequest('/api/task-fields', 'POST', {
       app_id: APP_ID,
+      task_name: 'write_email',
       field_name: 'job_title',
       field_label: 'Your Job Title',
       field_type: 'text',
@@ -63,7 +65,7 @@ async function setup() {
       field_label: 'Email Recipient',
       field_type: 'text',
       required: true,
-      order: 1,
+      order: 3,
     });
     console.log('✓ Created recipient field\n');
 
@@ -76,7 +78,7 @@ async function setup() {
       field_label: 'Email Subject',
       field_type: 'text',
       required: true,
-      order: 2,
+      order: 4,
     });
     console.log('✓ Created subject field\n');
 

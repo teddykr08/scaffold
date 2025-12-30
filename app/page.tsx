@@ -22,6 +22,13 @@ export default function Page() {
           </Link>
 
           <Link
+            href="/demo"
+            className="w-full sm:w-auto px-8 py-4 border border-gray-200 rounded-xl font-bold bg-white/50 backdrop-blur-sm hover:bg-white transition-all text-center"
+          >
+            See Demo
+          </Link>
+
+          <Link
             href="/how-it-works"
             className="w-full sm:w-auto px-8 py-4 border border-gray-200 rounded-xl font-bold hover:bg-gray-50 transition-all text-center"
           >

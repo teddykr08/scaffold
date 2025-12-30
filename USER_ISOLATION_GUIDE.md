@@ -4,7 +4,7 @@
 
 This implementation adds user isolation to your Scaffold application. Each user now has their own separate apps, tasks, and fields. New users automatically get 3 default test apps:
 1. Study Tutor
-2. Lawyer
+2. Recipe Genius
 3. Personal Trainer
 
 Multiple users can have apps/tasks with the same name since they're isolated by `user_id`.
@@ -27,9 +27,7 @@ See: `migrations/004_add_user_isolation.sql` and `migrations/005_create_default_
 - Changed unique constraint from `(app_id, name)` to `(app_id, name, user_id)` - allows same task names for different users
 - Enabled RLS with user-based policies
 
-#### 3. **global_fields** table
-- Added `user_id` UUID column
-- Enabled RLS with user-based policies
+
 
 #### 4. **task_fields** table
 - Added `user_id` UUID column
@@ -72,9 +70,7 @@ All API routes now require authentication via `Authorization: Bearer <token>` he
    - GET: Filter tasks by user_id
    - POST: Add user_id when creating, verify app ownership
 
-4. **`/api/global-fields`**
-   - GET: Filter by user_id
-   - POST: Add user_id when creating, verify app ownership
+
 
 5. **`/api/task-fields`**
    - GET: Filter by user_id
@@ -171,7 +167,7 @@ ALTER TABLE apps DISABLE ROW LEVEL SECURITY;
 - `app/api/apps/route.ts`
 - `app/api/apps/[id]/route.ts`
 - `app/api/tasks/route.ts`
-- `app/api/global-fields/route.ts`
+
 - `app/api/task-fields/route.ts`
 - `app/api/prompt-templates/route.ts`
 - `app/dashboard/page.tsx`

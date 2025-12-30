@@ -31,43 +31,7 @@ console.log('App created:', appId);
 
 **Save the `app_id` from the response** - you'll need it for all the next steps.
 
-## Step 2: Create Global Fields
-
-Global fields are user profile fields that apply to all tasks (like name, job title, etc.).
-
-Create two global fields: `user_name` and `job_title`:
-
-```javascript
-// Create user_name field
-await fetch('YOUR_Scaffold_URL/api/global-fields', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    app_id: appId, // Use the app_id from Step 1
-    field_name: 'user_name',
-    field_label: 'Your Name',
-    field_type: 'text',
-    required: true,
-    order: 1
-  })
-});
-
-// Create job_title field
-await fetch('YOUR_Scaffold_URL/api/global-fields', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    app_id: appId,
-    field_name: 'job_title',
-    field_label: 'Your Job Title',
-    field_type: 'text',
-    required: true,
-    order: 2
-  })
-});
-```
-
-## Step 3: Create Task Fields
+## Step 2: Create Task Fields
 
 Task fields are specific to a particular task. We'll create fields for the `write_email` task.
 
@@ -103,7 +67,7 @@ await fetch('YOUR_Scaffold_URL/api/task-fields', {
 });
 ```
 
-## Step 4: Create a Prompt Template
+## Step 3: Create a Prompt Template
 
 The prompt template defines what ChatGPT will see. Use `{{variable_name}}` to insert user input.
 
@@ -118,7 +82,6 @@ await fetch('YOUR_Scaffold_URL/api/prompt-templates', {
 
 Write a professional email with the following details:
 
-- From: {{user_name}}, {{job_title}}
 - To: {{recipient}}
 - Subject: {{subject}}
 
@@ -129,7 +92,7 @@ Please write the email body in a professional and courteous tone.`
 
 **Note:** The `{{system_header}}` variable is automatically replaced with your app's `system_header` from Step 1.
 
-## Step 5: Embed the Form
+## Step 4: Embed the Form
 
 Now embed the form in your app using an iframe:
 
@@ -149,7 +112,7 @@ Now embed the form in your app using an iframe:
 ## How It Works
 
 1. User visits your app and sees the embedded form
-2. User fills out the form (name, job title, recipient, subject)
+2. User fills out the form (recipient, subject)
 3. User clicks "Generate Prompt"
 4. User is redirected to ChatGPT with a personalized prompt ready to use
 
@@ -205,7 +168,7 @@ await fetch('YOUR_Scaffold_URL/api/task-fields', {
 ## Troubleshooting
 
 - **Form not loading?** Check that your `app_id` and `task_name` match what you created
-- **Fields not showing?** Make sure you created both global fields and task fields
+- **Fields not showing?** Make sure you created task fields for the correct task name
 - **Template not working?** Verify the template uses `{{field_name}}` exactly as you defined it
 
 ## Next Steps
