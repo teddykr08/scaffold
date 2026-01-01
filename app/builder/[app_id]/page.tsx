@@ -5,6 +5,13 @@ import { useAuth } from "../../context/AuthContext";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
+import ActionMenu from "../../components/ActionMenu";
+import RenameModal from "../../components/RenameModal";
+
+const FREE_TIER_LIMITS = {
+  APPS_PER_ACCOUNT: 5,
+  TASKS_PER_APP: 5,
+};
 
 type AppRow = {
     id: string;
@@ -95,6 +102,11 @@ export default function AppDetailPage() {
     const [fieldCounts, setFieldCounts] = useState<Record<string, number>>({});
 
     const [showNewTaskModal, setShowNewTaskModal] = useState(false);
+    
+    // Rename modal state
+    const [renameModalOpen, setRenameModalOpen] = useState(false);
+    const [renameTaskId, setRenameTaskId] = useState<string>("");
+    const [renameTaskName, setRenameTaskName] = useState<string>("");
 
     useEffect(() => {
         if (!loading && !user) {
@@ -135,6 +147,7 @@ export default function AppDetailPage() {
                 counts[task.name] = ((fieldsData?.fields || []).filter((f: FieldRow) => f.field_type !== "runtime")).length;
             }
             setFieldCounts(counts);
+            setTimeout(() => window.dispatchEvent(new CustomEvent('scaffold-tasks-loaded')), 100);
         }
     }
 
@@ -143,6 +156,12 @@ export default function AppDetailPage() {
         const name = newTaskName.trim();
         if (!name) {
             setStatus("❌ Task name required");
+            return;
+        }
+
+        // Check if at limit
+        if (tasks.length >= FREE_TIER_LIMITS.TASKS_PER_APP) {
+            setStatus(`❌ Task limit reached: Maximum ${FREE_TIER_LIMITS.TASKS_PER_APP} tasks per app`);
             return;
         }
 
@@ -162,6 +181,25 @@ export default function AppDetailPage() {
         setStatus("✅ Task created");
         setNewTaskName("");
         setShowNewTaskModal(false);
+        window.dispatchEvent(new CustomEvent('scaffold-task-created'));
+        await refreshTasks();
+    }
+
+    async function renameTask(taskId: string, newName: string) {
+        if (!newName.trim()) return;
+        setStatus("");
+        const slugified = slugifyFieldName(newName);
+        const res = await authenticatedFetch(`/api/tasks`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: taskId, name: slugified })
+        });
+        const data = await safeJson(res);
+        if (!data?.success) {
+            setStatus(`❌ Rename task failed: ${data?.error || "unknown error"}`);
+            return;
+        }
+        setStatus("✅ Task renamed successfully");
         await refreshTasks();
     }
 
@@ -196,6 +234,10 @@ export default function AppDetailPage() {
                                 {tasks.length} task{tasks.length !== 1 ? "s" : ""}
                             </p>
                         </div>
+                        <div className="text-right">
+                            <div className="text-sm font-bold text-gray-700">{tasks.length} / {FREE_TIER_LIMITS.TASKS_PER_APP} tasks</div>
+                            <div className="text-xs text-gray-500">Free tier limit</div>
+                        </div>
                     </div>
                 </div>
 
@@ -210,11 +252,35 @@ export default function AppDetailPage() {
                     {tasks.map((task) => (
                         <div
                             key={task.id}
-                            className="rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow cursor-pointer flex flex-col justify-between"
+                            data-tour="task-card"
+                            className="group rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow cursor-pointer flex flex-col justify-between relative"
                             onClick={() => router.push(`/builder/${appId}/${task.name}`)}
                         >
+                            <div className="absolute top-4 right-4">
+                                <ActionMenu
+                                    itemType="task"
+                                    onRename={() => {
+                                        setRenameTaskId(task.id);
+                                        setRenameTaskName(task.name);
+                                        setRenameModalOpen(true);
+                                    }}
+                                    onDelete={async () => {
+                                        if (!confirm(`Are you sure you want to delete task "${task.name}"?`)) return;
+                                        setStatus("");
+                                        const res = await authenticatedFetch(`/api/tasks?id=${task.id}`, { method: "DELETE" });
+                                        const data = await safeJson(res);
+                                        if (!data?.success) {
+                                            setStatus(`❌ Delete task failed: ${data?.error || "unknown error"}`);
+                                            return;
+                                        }
+                                        setStatus("✅ Task deleted");
+                                        await refreshTasks();
+                                    }}
+                                />
+                            </div>
+
                             <div>
-                                <h3 className="text-lg font-semibold text-gray-900">{task.name}</h3>
+                                <h3 className="text-lg font-semibold text-gray-900 pr-8">{task.name}</h3>
                                 <div className="flex items-center gap-4 mt-2">
                                     <span className="text-sm text-gray-500 font-medium">
                                         Form: {(fieldCounts[task.name] || 0) > 0 ? "Yes" : "No"}
@@ -237,7 +303,7 @@ export default function AppDetailPage() {
                     ))}
 
                     {/* New Task Card */}
-                    <div className="rounded-xl border-2 border-dashed border-gray-300 p-6 flex flex-col items-center justify-center hover:border-gray-400 transition-colors cursor-pointer" onClick={() => setShowNewTaskModal(true)}>
+                    <div data-tour="create-task" className="rounded-xl border-2 border-dashed border-gray-300 p-6 flex flex-col items-center justify-center hover:border-gray-400 transition-colors cursor-pointer" onClick={() => setShowNewTaskModal(true)}>
                         <div className="text-4xl text-gray-400 mb-3">+</div>
                         <h3 className="text-lg font-semibold text-gray-900 mb-4">New Task</h3>
                         <button
@@ -282,6 +348,19 @@ export default function AppDetailPage() {
                         </div>
                     </div>
                 )}
+
+                {/* Rename Modal */}
+                <RenameModal
+                    isOpen={renameModalOpen}
+                    onClose={() => setRenameModalOpen(false)}
+                    onRename={(newName) => {
+                        if (renameTaskId) {
+                            renameTask(renameTaskId, newName);
+                        }
+                    }}
+                    currentName={renameTaskName}
+                    itemType="Task"
+                />
             </div>
         </main>
     );

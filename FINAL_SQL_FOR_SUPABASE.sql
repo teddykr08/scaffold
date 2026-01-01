@@ -6,6 +6,72 @@
 -- ============================================================================
 
 -- ============================================================================
+-- PART 0: ENSURE TABLES EXIST
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS apps (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS tasks (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  app_id UUID REFERENCES apps(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS task_fields (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  app_id UUID REFERENCES apps(id) ON DELETE CASCADE,
+  task_name TEXT,
+  field_name TEXT,
+  field_label TEXT,
+  field_type TEXT,
+  required BOOLEAN DEFAULT true,
+  "order" INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS prompt_templates (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  app_id UUID REFERENCES apps(id) ON DELETE CASCADE,
+  task_name TEXT,
+  template TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  username TEXT UNIQUE,
+  full_name TEXT,
+  avatar_url TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+-- Helper function to find email by username (for login)
+CREATE OR REPLACE FUNCTION get_email_by_username(username_input text)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  target_user_id uuid;
+  found_email text;
+BEGIN
+  SELECT id INTO target_user_id FROM profiles WHERE username = username_input;
+  
+  IF target_user_id IS NOT NULL THEN
+    SELECT email INTO found_email FROM auth.users WHERE id = target_user_id;
+  END IF;
+  
+  RETURN found_email;
+END;
+$$;
+
+-- ============================================================================
 -- PART 1: ADD USER ISOLATION COLUMNS TO ALL TABLES
 -- ============================================================================
 
@@ -25,6 +91,8 @@ ADD CONSTRAINT apps_user_id_name_unique UNIQUE (user_id, name);
 -- Drop old unique constraint on name if it exists
 ALTER TABLE apps 
 DROP CONSTRAINT IF EXISTS apps_name_unique;
+ALTER TABLE apps 
+DROP CONSTRAINT IF EXISTS apps_name_key;
 
 -- Enable RLS on apps table
 ALTER TABLE apps ENABLE ROW LEVEL SECURITY;
@@ -199,8 +267,24 @@ DECLARE
   recipe_genius_app_id UUID;
   personal_trainer_app_id UUID;
 BEGIN
-  -- Create 3 default test apps for the new user
-  -- Use ON CONFLICT DO NOTHING to avoid trigger failures if things already exist
+  -- 1. Create Profile (Safe-fail)
+  BEGIN
+    INSERT INTO public.profiles (id, username, full_name, avatar_url)
+    VALUES (
+      NEW.id,
+      NEW.raw_user_meta_data->>'username',
+      NEW.raw_user_meta_data->>'full_name',
+      NEW.raw_user_meta_data->>'avatar_url'
+    )
+    ON CONFLICT (id) DO NOTHING;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'Error creating profile: %', SQLERRM;
+  END;
+
+  -- 2. Create Default Apps (Safe-fail)
+  BEGIN
+    -- Create 3 default test apps for the new user
+    -- Use ON CONFLICT DO NOTHING to avoid trigger failures if things already exist
   INSERT INTO apps (name, user_id, created_at)
   VALUES 
     ('Study Tutor', NEW.id, now()),
@@ -283,6 +367,10 @@ BEGIN
     VALUES (personal_trainer_app_id, NEW.id, 'create_diet', 'You are a nutritionist. Fitness Level: {{fitness_level}}, Goals: {{goals}}. Create a customized diet plan for: <<fixed>>', now())
     ON CONFLICT DO NOTHING;
   END IF;
+
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'Error creating default apps: %', SQLERRM;
+  END;
 
   RETURN NEW;
 END;

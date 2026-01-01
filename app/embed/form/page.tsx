@@ -20,7 +20,8 @@ function EmbedFormInner() {
   const appIdParam = searchParams.get("app_id");
   const taskNameParam = searchParams.get("task_name");
   const fixedContentFromUrl = searchParams.get("fixed");
-  const [localFixedContent, setLocalFixedContent] = useState("");
+  const colorFromUrl = searchParams.get("color");
+  const fontFromUrl = searchParams.get("font");
 
   const [fields, setFields] = useState<FieldRow[]>([]);
   const [task, setTask] = useState<{ has_form: boolean } | null>(null);
@@ -29,6 +30,10 @@ function EmbedFormInner() {
   const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Customization state - initialize from URL params
+  const [customColor, setCustomColor] = useState(colorFromUrl || "#000000");
+  const [fontFamily, setFontFamily] = useState(fontFromUrl || "Inter");
+
   useEffect(() => {
     if (!appIdParam || !taskNameParam) return;
 
@@ -36,18 +41,31 @@ function EmbedFormInner() {
     const taskName = taskNameParam;
 
     async function fetchData() {
-      // 1. Fetch Task Info (for has_form)
-      const taskRes = await fetch(`/api/tasks/get?app_id=${encodeURIComponent(appId)}&name=${encodeURIComponent(taskName)}`);
+      // 1. Fetch Task Info
+      const taskRes = await fetch(`/api/tasks/get?app_id=${encodeURIComponent(appId)}&name=${encodeURIComponent(taskName)}&t=${Date.now()}`, { cache: "no-store" });
       const taskData = await taskRes.json();
+      console.log("fetchData -> task", taskData);
       if (taskData.success) {
         setTask(taskData.task);
+        // Only set customization from task data if NOT provided via URL params
+        if (!colorFromUrl) {
+          const color = taskData.task.custom_color ?? taskData.task.customColor ?? "#000000";
+          console.log("Setting color from API:", color);
+          setCustomColor(color);
+        }
+        if (!fontFromUrl) {
+          const font = taskData.task.font ?? taskData.task.font_family ?? "Inter";
+          console.log("Setting font from API:", font);
+          setFontFamily(font);
+        }
       }
 
       // 2. Fetch Task Fields
       const tRes = await fetch(
         `/api/task-fields?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(
           taskName
-        )}`
+        )}&t=${Date.now()}`,
+        { cache: "no-store" }
       );
       const tData = await tRes.json();
       const tFields: FieldRow[] = tData.success ? tData.fields || [] : [];
@@ -65,7 +83,7 @@ function EmbedFormInner() {
     }
 
     fetchData();
-  }, [appIdParam, taskNameParam]);
+  }, [appIdParam, taskNameParam, colorFromUrl, fontFromUrl]);
 
   // Auto-generate prompt for formless tasks (has_form = false)
   useEffect(() => {
@@ -107,7 +125,7 @@ function EmbedFormInner() {
         app_id: appId,
         task_name: taskName,
         field_values: values,
-        fixed_content: fixedContentFromUrl || localFixedContent || null,
+        fixed_content: fixedContentFromUrl || null,
       }),
     });
 
@@ -142,10 +160,10 @@ function EmbedFormInner() {
 
     if (field.field_type === "textarea") {
       return (
-        <div key={field.id}>
+        <div key={field.id} className="relative z-10">
           {label}
           <textarea
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+            className="field-input mt-1 w-full rounded-lg border px-3 py-2 transition-all focus:outline-none focus:ring-2"
             rows={4}
             value={val}
             onChange={(e) =>
@@ -158,10 +176,10 @@ function EmbedFormInner() {
 
     if (field.field_type === "select") {
       return (
-        <div key={field.id}>
+        <div key={field.id} className="relative z-10">
           {label}
           <select
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+            className="field-input mt-1 w-full rounded-lg border px-3 py-2 transition-all focus:outline-none focus:ring-2"
             value={val}
             onChange={(e) =>
               setValues({ ...values, [field.field_name]: e.target.value })
@@ -180,11 +198,11 @@ function EmbedFormInner() {
 
     if (field.field_type === "number") {
       return (
-        <div key={field.id}>
+        <div key={field.id} className="relative z-10">
           {label}
           <input
             type="number"
-            className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+            className="field-input mt-1 w-full rounded-lg border px-3 py-2 transition-all focus:outline-none focus:ring-2"
             value={val}
             onChange={(e) =>
               setValues({ ...values, [field.field_name]: e.target.value })
@@ -195,11 +213,11 @@ function EmbedFormInner() {
     }
 
     return (
-      <div key={field.id}>
+      <div key={field.id} className="relative z-10">
         {label}
         <input
           type="text"
-          className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2"
+          className="field-input mt-1 w-full rounded-lg border px-3 py-2 transition-all focus:outline-none focus:ring-2"
           value={val}
           onChange={(e) =>
             setValues({ ...values, [field.field_name]: e.target.value })
@@ -209,34 +227,96 @@ function EmbedFormInner() {
     );
   }
 
-  return (
-    <main className="min-h-screen bg-white text-gray-900 p-6">
-      <div className="max-w-2xl mx-auto">
-        <div className="mt-6 space-y-4">
-          {task?.has_form !== false && fields.filter(f => f.field_type !== "runtime").map(renderField)}
+  // --- Dynamic Styling Logic ---
+  // Force default theme for simpler, Google-forms-like appearance
+  const theme = "default";
 
-          {/* Main Input for <<fixed>> content if not pre-populated in URL */}
-          {!fixedContentFromUrl && (
-            <div className="pt-2">
-              <label className="text-sm font-bold text-gray-900 mb-1 block">
-                {task?.has_form === false ? "Enter your prompt theme/ingredients:" : "Additional Instructions"}
-                {task?.has_form !== false && <span className="text-gray-400 font-normal ml-1">(optional)</span>}
-              </label>
-              <textarea
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/30 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-black transition-all"
-                rows={4}
-                placeholder={task?.has_form === false ? "e.g. Chicken, Spinach, and Cream..." : "Any extra context or preferences? (optional)"}
-                value={localFixedContent}
-                onChange={(e) => setLocalFixedContent(e.target.value)}
-              />
-            </div>
-          )}
+  // Helper to get font URL
+  const getGoogleFontUrl = (font: string) => {
+    return `https://fonts.googleapis.com/css2?family=${font.replace(/ /g, "+")}:wght@300;400;600;700&display=swap`;
+  };
+
+  // Convert hex to variants for some themes
+  // (Simplified for now, just using the color directly or basic opacities)
+
+  return (
+    <main className={`min-h-screen p-4 md:p-8 theme-${theme}`} style={{
+      fontFamily: `"${fontFamily}", sans-serif`,
+      // @ts-ignore
+      "--brand-color": customColor,
+    } as React.CSSProperties}>
+      <style jsx global>{`
+        @import url('${getGoogleFontUrl(fontFamily)}');
+        
+        :root {
+           --brand-color: ${customColor};
+        }
+
+        /* 
+           SHARED RESETS 
+           Every theme uses shades of black/white/gray + ONE accent color 
+        */
+
+        /* === 1. DEFAULT (Google Form Style) === */
+        /* Light gray BG, White Card with Top Accent Bar */
+        .theme-default {
+            background-color: #f0f2f5;
+            color: #202124;
+        }
+        .theme-default .card-container {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #dadce0;
+            /* The one big accent: Top Border */
+            border-top: 10px solid var(--brand-color); 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+        }
+        .theme-default label {
+            font-weight: 500;
+            color: #202124;
+            margin-bottom: 4px;
+            display: block;
+        }
+        .theme-default .field-input {
+            background: #fff;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            color: #3c4043;
+        }
+        .theme-default .field-input:focus {
+            outline: none;
+            border-bottom: 2px solid var(--brand-color);
+            border-radius: 4px 4px 2px 2px;
+            /* Google forms often just underline interaction on focus, 
+               but we keep the box shape for consistency with other inputs */
+             border-color: var(--brand-color);
+        }
+        .theme-default .btn-generate {
+            background-color: var(--brand-color);
+            color: white; /* We assume accent is dark enough, or user picks right color */
+            border-radius: 4px;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+
+        /* Additional themes removed — only default theme is active. */
+        
+      `}</style>
+
+      <div className="mx-auto max-w-2xl">
+        <div className="card-container p-6 md:p-10 space-y-6">
+
+          {fields
+            .filter((f) => f.field_type !== "runtime" && !f.field_label.toLowerCase().includes("additional instructions") && f.field_name !== "additional_instructions")
+            .map((field) => renderField(field))}
         </div>
 
         {/* Only show Generate button for tasks with forms */}
         {task?.has_form !== false && (
           <button
-            className="mt-8 w-full rounded-xl bg-black px-6 py-4 text-sm font-bold text-white hover:bg-gray-800 transition-all active:scale-[0.98] shadow-lg shadow-gray-200"
+            className="btn-generate mt-8 w-full rounded-xl px-6 py-4 text-sm font-bold transition-all active:scale-[0.98] shadow-lg"
             onClick={handleSubmit}
           >
             {status === "generating" ? "Generating..." : "Generate Prompt"}
@@ -250,19 +330,33 @@ function EmbedFormInner() {
         )}
 
         {generatedPrompt && (
-          <div className="mt-8 rounded-2xl border border-blue-100 bg-white p-6 shadow-2xl shadow-blue-100/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="mt-8 rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ border: '1px solid #e6e6e9', borderTop: '6px solid var(--brand-color)' }}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+              <div className="flex h-8 w-8 items-center justify-center rounded-full text-white shadow-lg" style={{ backgroundColor: 'var(--brand-color)' }}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
               </div>
-              <h2 className="text-lg font-bold text-gray-900 tracking-tight">Your Prompt is Ready</h2>
+              <h2 className="text-lg font-bold text-gray-900 tracking-tight">
+                Your Prompt is Ready
+              </h2>
             </div>
 
             <div className="relative group">
               <textarea
                 readOnly
                 value={generatedPrompt}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-4 font-mono text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all resize-none"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-4 font-mono text-sm text-gray-700 focus:outline-none transition-all resize-none"
                 rows={10}
               />
               <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -275,31 +369,70 @@ function EmbedFormInner() {
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <button
                 onClick={copyToClipboard}
-                className={`flex items-center justify-center gap-2 rounded-xl px-6 py-4 text-sm font-bold transition-all shadow-lg ${copied
-                  ? "bg-green-600 text-white shadow-green-200 scale-[0.98]"
-                  : "bg-blue-600 text-white hover:bg-blue-700 shadow-blue-200 hover:shadow-blue-300 active:scale-[0.98]"
-                  }`}
+                className="flex items-center justify-center gap-2 rounded-xl px-6 py-4 text-sm font-bold transition-all shadow-lg active:scale-[0.98]"
+                style={{ backgroundColor: 'var(--brand-color)', color: '#ffffff', boxShadow: '0 8px 20px rgba(0,0,0,0.08)' }}
               >
                 {copied ? (
                   <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
                     ✓ Copied!
                   </>
                 ) : (
                   <>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" ry="1" /></svg>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                      <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
+                    </svg>
                     Copy Prompt
                   </>
                 )}
               </button>
 
               <a
-                href={`https://chatgpt.com/?q=${encodeURIComponent(generatedPrompt)}`}
+                href={`https://chatgpt.com/?q=${encodeURIComponent(
+                  generatedPrompt
+                )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 rounded-xl border-2 border-gray-100 bg-white px-6 py-4 text-sm font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-200 transition-all active:scale-[0.98] shadow-sm"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /><polyline points="15 3 21 3 21 9" /><line x1="10" y1="14" x2="21" y2="3" /></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                  <polyline points="15 3 21 3 21 9" />
+                  <line x1="10" y1="14" x2="21" y2="3" />
+                </svg>
                 Open in ChatGPT
               </a>
             </div>
@@ -336,4 +469,3 @@ export default function EmbedFormPage() {
     </Suspense>
   );
 }
-

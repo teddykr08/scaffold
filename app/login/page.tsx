@@ -9,8 +9,10 @@ function LoginContent() {
     const mode = searchParams.get("mode");
     const [isSignUp, setIsSignUp] = useState(mode === "signup");
     const [email, setEmail] = useState("");
+    const [username, setUsername] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
     const [loading, setLoading] = useState(false);
 
     const { signIn, signUp, signInWithGoogle, signInWithGitHub } = useAuth();
@@ -25,12 +27,13 @@ function LoginContent() {
     async function handleEmailAuth(e: React.FormEvent) {
         e.preventDefault();
         setError("");
+        setSuccess("");
         setLoading(true);
 
         try {
             if (isSignUp) {
-                await signUp(email, password);
-                setError("Check your email for confirmation link!");
+                await signUp(email, password, { username });
+                setSuccess("Check your email for confirmation link!");
             } else {
                 await signIn(email, password);
                 router.push("/builder");
@@ -44,6 +47,7 @@ function LoginContent() {
 
     async function handleSocialAuth(provider: "google" | "github") {
         setError("");
+        setSuccess("");
         setLoading(true);
         try {
             if (provider === "google") await signInWithGoogle();
@@ -71,6 +75,12 @@ function LoginContent() {
                 {error && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
                         {error}
+                    </div>
+                )}
+
+                {success && (
+                    <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
+                        {success}
                     </div>
                 )}
 
@@ -111,6 +121,23 @@ function LoginContent() {
                 </div>
 
                 <form onSubmit={handleEmailAuth} className="space-y-4">
+                    {isSignUp && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Username
+                            </label>
+                            <input
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                required
+                                minLength={3}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black transition-all"
+                                placeholder="choose a unique username"
+                            />
+                        </div>
+                    )}
+
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Email

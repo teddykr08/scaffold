@@ -38,6 +38,11 @@ export default function Navbar() {
     }
   };
 
+  // Check if we are on an embed page
+  if (pathname?.startsWith("/embed")) {
+    return null;
+  }
+
   return (
     <header className="w-full border-b border-gray-200 bg-white sticky top-0 z-50">
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
@@ -83,10 +88,10 @@ export default function Navbar() {
                 className="flex items-center gap-2 p-1 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors focus:outline-none"
               >
                 <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-xs font-bold text-white">
-                  {user.email?.[0].toUpperCase()}
+                  {(user.user_metadata?.username || user.email || "U")[0].toUpperCase()}
                 </div>
                 <span className="hidden sm:block text-sm text-gray-700 font-medium pr-1">
-                  {user.email?.split('@')[0]}
+                  {user.user_metadata?.username || user.email?.split('@')[0]}
                 </span>
                 <svg className={`w-4 h-4 text-gray-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -96,6 +101,9 @@ export default function Navbar() {
               {dropdownOpen && (
                 <div className="absolute right-0 mt-2 w-52 bg-white border border-gray-200 rounded-xl shadow-xl py-2 animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="px-4 py-2 border-b border-gray-100 mb-1">
+                    {user.user_metadata?.username && (
+                      <p className="text-sm font-medium text-gray-900 truncate">{user.user_metadata.username}</p>
+                    )}
                     <p className="text-xs text-gray-500 truncate">{user.email}</p>
                   </div>
 
@@ -109,6 +117,21 @@ export default function Navbar() {
                     </svg>
                     Dashboard
                   </Link>
+
+                  <button
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      if (window.location.pathname !== '/builder') {
+                        router.push('/builder');
+                      }
+                      // Dispatch with a small delay to allow nav to complete or just general safety
+                      setTimeout(() => window.dispatchEvent(new CustomEvent('scaffold-restart-tutorial')), 200);
+                    }}
+                    className="w-full text-left flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Restart Tutorial
+                  </button>
 
                   <div className="h-px bg-gray-100 my-1" />
 

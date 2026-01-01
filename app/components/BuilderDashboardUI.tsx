@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import ActionMenu from "./ActionMenu";
+import RenameModal from "./RenameModal";
 
 type AppRow = {
     id: string;
@@ -13,16 +15,25 @@ interface BuilderDashboardUIProps {
     apps: AppRow[];
     onAppClick: (appId: string) => void;
     onCreateApp: (name: string) => void;
+    onDeleteApp?: (appId: string) => void;
+    onRenameApp?: (appId: string, newName: string) => void;
     isDemo?: boolean;
+    appLimit?: number;
 }
 
 export default function BuilderDashboardUI({
     apps,
     onAppClick,
     onCreateApp,
-    isDemo = false
+    onDeleteApp,
+    onRenameApp,
+    isDemo = false,
+    appLimit = 5
 }: BuilderDashboardUIProps) {
     const [newAppName, setNewAppName] = useState("");
+    const [renameModalOpen, setRenameModalOpen] = useState(false);
+    const [renameAppId, setRenameAppId] = useState<string>("");
+    const [renameAppName, setRenameAppName] = useState<string>("");
 
     const handleCreate = () => {
         if (!newAppName.trim()) return;
@@ -55,20 +66,46 @@ export default function BuilderDashboardUI({
                 )}
 
                 {/* Header */}
-                <div className="mb-12">
-                    <h1 className="font-graffiti text-7xl tracking-tighter text-black">Dashboard</h1>
-                    <p className="text-gray-500 mt-2 text-xl font-medium uppercase tracking-[0.2em]">Manage your AI form projects</p>
+                <div className="mb-12 flex items-center justify-between">
+                    <div>
+                        <h1 className="font-graffiti text-7xl tracking-tighter text-black">Dashboard</h1>
+                        <p className="text-gray-500 mt-2 text-xl font-medium uppercase tracking-[0.2em]">Manage your AI form projects</p>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-sm font-bold text-gray-700">{apps.length} / {appLimit} apps</div>
+                        <div className="text-xs text-gray-500">Free tier limit</div>
+                    </div>
                 </div>
 
                 {/* App Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div data-tour="example-projects-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                     {apps.map((app) => (
                         <div
                             key={app.id}
+                            data-tour="project-card"
                             className="group rounded-[2.5rem] border border-gray-100 p-10 hover:border-black hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] transition-all duration-500 cursor-pointer flex flex-col justify-between bg-white relative overflow-hidden"
                             onClick={() => onAppClick(app.id)}
                         >
                             <div className="absolute top-0 left-0 w-full h-2 bg-gray-50 group-hover:bg-scaffold-brand transition-colors duration-500"></div>
+
+                            {(onDeleteApp || onRenameApp) && (
+                                <div className="absolute top-6 right-6">
+                                    <ActionMenu
+                                        itemType="project"
+                                        onRename={() => {
+                                            setRenameAppId(app.id);
+                                            setRenameAppName(app.name);
+                                            setRenameModalOpen(true);
+                                        }}
+                                        onDelete={() => {
+                                            if (onDeleteApp) {
+                                                onDeleteApp(app.id);
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            )}
+
                             <div>
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center group-hover:bg-scaffold-brand/10 transition-colors">
@@ -91,7 +128,7 @@ export default function BuilderDashboardUI({
                     ))}
 
                     {/* New Project Card */}
-                    <div className="rounded-[2.5rem] border-2 border-dashed border-gray-200 p-10 flex flex-col items-center justify-center hover:border-scaffold-brand hover:bg-scaffold-brand/[0.02] transition-all duration-500 group relative overflow-hidden">
+                    <div data-tour="create-project" className="rounded-[2.5rem] border-2 border-dashed border-gray-200 p-10 flex flex-col items-center justify-center hover:border-scaffold-brand hover:bg-scaffold-brand/[0.02] transition-all duration-500 group relative overflow-hidden">
                         <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-gray-50 rounded-full group-hover:bg-scaffold-brand/10 transition-all duration-700 blur-2xl"></div>
                         <div className="text-6xl text-gray-200 mb-6 group-hover:text-scaffold-brand group-hover:scale-110 transition-all duration-500 font-light">+</div>
                         <h3 className="text-2xl font-bold text-gray-900 mb-8">Create New Project</h3>
@@ -116,6 +153,19 @@ export default function BuilderDashboardUI({
                     </div>
                 </div>
             </div>
+
+            {/* Rename Modal */}
+            <RenameModal
+                isOpen={renameModalOpen}
+                onClose={() => setRenameModalOpen(false)}
+                onRename={(newName) => {
+                    if (onRenameApp && renameAppId) {
+                        onRenameApp(renameAppId, newName);
+                    }
+                }}
+                currentName={renameAppName}
+                itemType="Project"
+            />
         </main>
     );
 }

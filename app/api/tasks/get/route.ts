@@ -17,27 +17,35 @@ export async function GET(req: NextRequest) {
 
         const supabase = getSupabaseServer();
 
-        // Since embed might be public, this search should be careful. 
-        // However, the user diagram implies everything is tied to user_id.
-        // For now, we fetch the task. (Note: In a true public embed, you'd want a separate check).
-        const { data, error } = await supabase
-            .from("tasks")
-            .select("*")
-            .eq("app_id", app_id)
-            .eq("name", name)
-            .single();
+        // Use RPC with raw SQL to bypass Supabase query caching
+        const { data, error } = await supabase.rpc('get_fresh_task', {
+            p_app_id: app_id,
+            p_name: name
+        });
 
-        if (error || !data) {
+        const task = data?.[0];
+
+        console.log('[tasks/get]', { app_id, name, error, data: task });
+
+        if (error || !task) {
             return NextResponse.json(
-                { success: false, error: "Task not found" },
+                { success: false, error: error?.message || "Task not found" },
                 { status: 404 }
             );
         }
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             success: true,
-            task: data,
+            task,
         });
+
+        // Prevent any caching of customization data
+        response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+        response.headers.set('Pragma', 'no-cache');
+        response.headers.set('Expires', '0');
+        response.headers.set('Surrogate-Control', 'no-store');
+
+        return response;
     } catch (error: any) {
         return NextResponse.json(
             { success: false, error: error.message },

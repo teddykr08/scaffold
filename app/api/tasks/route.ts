@@ -177,3 +177,71 @@ export async function DELETE(req: NextRequest) {
         );
     }
 }
+
+// PUT /api/tasks - Update a task
+export async function PUT(req: NextRequest) {
+    try {
+        const supabaseServer = getSupabaseServer();
+        const body = await req.json();
+        const { id, theme, custom_color, font, name } = body;
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: "Missing task id" },
+                { status: 400 }
+            );
+        }
+
+        const authHeader = req.headers.get("authorization");
+        if (!authHeader) {
+            return NextResponse.json(
+                { success: false, error: "Unauthorized" },
+                { status: 401 }
+            );
+        }
+
+        const token = authHeader.replace("Bearer ", "");
+        const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
+
+        if (userError || !user) {
+            return NextResponse.json(
+                { success: false, error: "Unauthorized" },
+                { status: 401 }
+            );
+        }
+
+        // Update the task
+        const updates: Record<string, any> = {};
+        if (theme !== undefined) updates.theme = theme;
+        if (custom_color !== undefined) updates.custom_color = custom_color;
+        if (font !== undefined) updates.font = font;
+        if (name !== undefined && name.trim()) updates.name = name.trim();
+
+        console.log("[tasks] PUT -> updating task", { id, user_id: user.id, updates });
+
+        const { data, error } = await supabaseServer
+            .from("tasks")
+            .update(updates)
+            .eq("id", id)
+            .eq("user_id", user.id)
+            .select()
+            .single();
+
+        console.log("[tasks] PUT -> response", { error, data });
+
+        if (error) {
+            return NextResponse.json(
+                { success: false, error: error.message },
+                { status: 500 }
+            );
+        }
+
+        return NextResponse.json({ success: true, task: data });
+    } catch (error) {
+        console.error("[tasks] PUT error:", error);
+        return NextResponse.json(
+            { success: false, error: "Internal server error" },
+            { status: 500 }
+        );
+    }
+}

@@ -34,7 +34,10 @@ export async function GET(req: NextRequest) {
 
         return NextResponse.json({
             success: true,
-            fields: data || [],
+            fields: (data || []).filter((f: any) =>
+                !f.field_label?.toLowerCase().includes("additional") &&
+                !f.field_name?.toLowerCase().includes("additional")
+            ),
         });
     } catch (error) {
         console.error("[task-fields] GET error:", error);

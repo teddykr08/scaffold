@@ -5,6 +5,8 @@ import { useAuth } from "../../../context/AuthContext";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@supabase/supabase-js";
+import HelpTooltip from "../../../components/HelpTooltip";
+import TemplateImproverPopup from "../../../components/TemplateImproverPopup";
 
 type AppRow = {
     id: string;
@@ -121,10 +123,27 @@ export default function TaskEditorPage() {
     const [templates, setTemplates] = useState<TemplateRow[]>([]);
     const [lastSavedTemplate, setLastSavedTemplate] = useState<string>("");
 
+    const [useFixedPrompt, setUseFixedPrompt] = useState(false);
+
+    // Customization State
+    const [theme, setTheme] = useState("default");
+    const [customColor, setCustomColor] = useState("#000000");
+    const [font, setFont] = useState("Inter");
+    const [isSavingSettings, setIsSavingSettings] = useState(false);
+    const [previewKey, setPreviewKey] = useState(0); // Force iframe reload
+    const [isImproverOpen, setIsImproverOpen] = useState(false);
+
+    // Log environment variables on mount
+    useEffect(() => {
+        console.log('[Task Editor] Environment variables check:');
+        console.log('  NEXT_PUBLIC_HELP_APP_ID:', process.env.NEXT_PUBLIC_HELP_APP_ID || 'NOT SET');
+        console.log('  NEXT_PUBLIC_IMPROVER_APP_ID:', process.env.NEXT_PUBLIC_IMPROVER_APP_ID || 'NOT SET');
+    }, []);
+
     const embedUrl = useMemo(() => {
         if (!appId || !taskName) return "";
-        return `/embed/form?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(taskName)}`;
-    }, [appId, taskName]);
+        return `/embed/form?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(taskName)}&color=${encodeURIComponent(customColor || '#000000')}&font=${encodeURIComponent(font || 'Inter')}`;
+    }, [appId, taskName, customColor, font]);
 
     const prodEmbedUrlHint = useMemo(() => {
         return embedUrl ? `https://scaffoldtool.vercel.app${embedUrl}` : "";
@@ -142,8 +161,28 @@ export default function TaskEditorPage() {
         refreshTask();
         refreshTaskFields();
         refreshTemplates();
+        setTimeout(() => window.dispatchEvent(new CustomEvent('scaffold-editor-loaded')), 500);
+
+        if (taskName.toLowerCase().includes("recipe")) {
+            setUseFixedPrompt(true);
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [appId, taskName]);
+
+    // Listen for template improved event
+    useEffect(() => {
+        const handleTemplateImproved = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            if (customEvent.detail?.template) {
+                setTemplate(customEvent.detail.template);
+                setStatus("✅ Template updated! Don't forget to save.");
+                setTimeout(() => setStatus(""), 3000);
+            }
+        };
+
+        window.addEventListener("templateImproved", handleTemplateImproved);
+        return () => window.removeEventListener("templateImproved", handleTemplateImproved);
+    }, []);
 
     async function refreshApp() {
         const res = await authenticatedFetch("/api/apps", { method: "GET" });
@@ -160,7 +199,14 @@ export default function TaskEditorPage() {
         const data = await safeJson(res);
         if (data?.success) {
             const foundTask = (data.tasks || []).find((t: TaskRow) => t.name === taskName);
-            setTask(foundTask || null);
+            if (foundTask) {
+                setTask(foundTask);
+                setTheme(foundTask.theme || "default");
+                setCustomColor(foundTask.custom_color || "#000000");
+                setFont(foundTask.font || "Inter");
+            } else {
+                setTask(null);
+            }
         }
     }
 
@@ -208,6 +254,7 @@ export default function TaskEditorPage() {
             return;
         }
         setStatus("✅ Task field added");
+        window.dispatchEvent(new CustomEvent('scaffold-field-added'));
         await refreshTaskFields();
     }
 
@@ -228,6 +275,64 @@ export default function TaskEditorPage() {
 
         setStatus("✅ Task field deleted");
         await refreshTaskFields();
+    }
+
+    async function saveCustomization() {
+        // Debug guard to ensure we have a task ID
+        if (!task?.id) {
+            console.warn("saveCustomization called without task id", { task });
+            setStatus("❌ Missing task id");
+            return;
+        }
+
+        setIsSavingSettings(true);
+        setStatus("Saving customization...");
+
+        try {
+            console.log("saveCustomization -> sending", {
+                id: task.id,
+                theme,
+                custom_color: customColor,
+                font,
+            });
+
+            const res = await authenticatedFetch("/api/tasks", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: task.id,
+                    theme,
+                    custom_color: customColor,
+                    font,
+                }),
+            });
+
+            console.log("saveCustomization response status", res.status);
+            const data = await safeJson(res);
+            console.log("saveCustomization response body", data);
+
+            if (data?.success) {
+                setStatus("✅ Customization saved!");
+                
+                // Update iframe URL with color and font from PUT response
+                const iframe = document.querySelector('iframe[src*="/embed/form"]') as HTMLIFrameElement;
+                if (iframe) {
+                    const url = new URL(iframe.src);
+                    url.searchParams.set('color', data.task.custom_color || customColor);
+                    url.searchParams.set('font', data.task.font || font);
+                    url.searchParams.set('v', Date.now().toString()); // cache bust
+                    iframe.src = url.toString();
+                    console.log("Updated iframe src with customization data:", url.toString());
+                }
+            } else {
+                setStatus(`❌ Failed to save: ${data?.error}`);
+            }
+        } catch (err: any) {
+            console.error("saveCustomization error", err);
+            setStatus(`❌ Failed to save: ${err?.message || "unknown error"}`);
+        } finally {
+            setIsSavingSettings(false);
+        }
     }
 
     async function saveTemplate() {
@@ -282,7 +387,7 @@ export default function TaskEditorPage() {
         const [required, setRequired] = useState(true);
 
         return (
-            <div className="rounded-2xl border border-gray-200 bg-gray-50/50 p-6 shadow-sm">
+            <div data-tour="add-field" className="rounded-2xl border border-gray-200 bg-gray-50/50 p-6 shadow-sm">
                 <div className="flex items-center justify-between mb-6">
                     <div className="font-bold text-lg text-gray-900">
                         Add New Field
@@ -413,22 +518,116 @@ export default function TaskEditorPage() {
                     {/* Left Column: UI & Fields */}
                     <div className="lg:col-span-12 space-y-8">
                         {/* Embed URL Section */}
-                        <div className="rounded-2xl border border-gray-200 p-8 shadow-sm">
+                        <div data-tour="embed-code" className="rounded-2xl border border-gray-200 p-8 shadow-sm">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
                                     <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
                                 </div>
-                                <h2 className="font-bold text-xl">Embed Snippet</h2>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="font-bold text-xl">Embed Snippet</h2>
+                                    <HelpTooltip term="embed_snippet" label="How do I use this?" />
+                                </div>
                             </div>
                             <p className="text-gray-500 text-sm mb-6">
                                 Copy this URL to iframe the form into your website.
                             </p>
 
+                            <div className="mb-8 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Customize Form Appearance</h3>
+                                    <HelpTooltip term="form_customization" label="Appearance options" />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 mb-2 block">Theme</label>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => setTheme("default")}
+                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all border-2 ${theme === 'default'
+                                                    ? "border-black bg-black text-white"
+                                                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                                                    }`}
+                                            >
+                                                default
+                                            </button>
+                                            <span className="text-xs text-gray-400">More themes coming soon</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-gray-500 mb-2 block">Font Family</label>
+                                        <select
+                                            value={font}
+                                            onChange={(e) => setFont(e.target.value)}
+                                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-black focus:outline-none"
+                                        >
+                                            {["Inter", "Roboto", "Open Sans", "Lato", "Montserrat", "Oswald", "Raleway", "Merriweather", "Playfair Display", "Courier Prime", "VT323", "Orbitron"].map(f => (
+                                                <option key={f} value={f}>{f}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <label className="text-xs font-bold text-gray-500 mb-2 block">Primary Color Theme</label>
+                                        <div className="flex items-center gap-4">
+                                            <div className="relative group">
+                                                <input
+                                                    type="color"
+                                                    value={customColor}
+                                                    onChange={(e) => setCustomColor(e.target.value)}
+                                                    className="w-12 h-12 p-1 rounded-full border-2 border-gray-200 cursor-pointer overflow-hidden"
+                                                    title="Choose color"
+                                                />
+                                            </div>
+                                            <div className="flex-1">
+                                                <input
+                                                    type="text"
+                                                    value={customColor}
+                                                    onChange={(e) => setCustomColor(e.target.value)}
+                                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono uppercase"
+                                                    placeholder="#000000"
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={saveCustomization}
+                                                disabled={isSavingSettings}
+                                                className="px-6 py-2 bg-black text-white rounded-lg text-sm font-bold hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                                            >
+                                                {isSavingSettings ? "Saving..." : "Save Look"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {/* Open Form Preview Link */}
+                            {prodEmbedUrlHint && (
+                                <div className="flex justify-end mb-4">
+                                    <a
+                                        href={prodEmbedUrlHint}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm font-bold text-gray-400 hover:text-black flex items-center gap-1 transition-colors"
+                                    >
+                                        Open Form Preview
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                    </a>
+                                </div>
+                            )}
+                            {embedUrl && (
+                                <div className="mb-6">
+                                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Live Preview</label>
+                                    <iframe
+                                        key={previewKey}
+                                        src={`${embedUrl}&v=${previewKey}`}
+                                        className="w-full rounded-xl border border-gray-200 bg-white shadow-sm"
+                                        style={{ height: "600px" }}
+                                        title="Form preview"
+                                    />
+                                </div>
+                            )}
                             <textarea
                                 readOnly
-                                className="w-full rounded-xl bg-gray-50 border border-gray-200 p-4 font-mono text-xs h-32 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                className="w-full rounded-xl bg-gray-50 border border-gray-200 p-4 font-mono text-xs h-32 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all mb-6"
                                 value={embedUrl ? `<iframe
-  src="https://scaffoldtool.vercel.app${embedUrl}"
+  src="https://scaffoldtool.vercel.app${embedUrl}${useFixedPrompt ? '&fixed=YOUR_FIXED_PROMPT' : ''}"
   width="100%"
   height="600"
   frameborder="0">
@@ -436,21 +635,35 @@ export default function TaskEditorPage() {
                                 onClick={(e) => (e.target as HTMLTextAreaElement).select()}
                                 title="Click to select all"
                             />
-
-                            {prodEmbedUrlHint && (
-                                <div className="mt-6 rounded-2xl bg-blue-50/50 border border-blue-100 p-6">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className="text-blue-600 font-bold text-sm uppercase tracking-widest">Pro Tip</span>
-                                    </div>
-                                    <h4 className="font-bold text-blue-900 mb-2">Dynamic Context</h4>
-                                    <p className="text-blue-800 text-sm leading-relaxed mb-4">
-                                        Pass hidden context to your prompts using the <code className="bg-blue-100 px-1 rounded text-blue-900 font-mono text-xs">fixed</code> parameter:
-                                    </p>
-                                    <div className="bg-white border border-blue-100 rounded-lg p-3 text-xs font-mono text-blue-600 break-all shadow-sm">
-                                        {prodEmbedUrlHint}&fixed=your+context+here
-                                    </div>
+                            <div className="flex items-start gap-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in mt-1">
+                                    <input
+                                        type="checkbox"
+                                        name="toggle"
+                                        id="fixed-prompt-toggle"
+                                        checked={useFixedPrompt}
+                                        onChange={(e) => setUseFixedPrompt(e.target.checked)}
+                                        className="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-gray-300 checked:right-0 checked:border-scaffold-brand checked:bg-scaffold-brand transition-all duration-300"
+                                        style={{ right: useFixedPrompt ? '0' : 'auto', left: useFixedPrompt ? 'auto' : '0' }}
+                                    />
+                                    <label
+                                        htmlFor="fixed-prompt-toggle"
+                                        className={`toggle-label block overflow-hidden h-5 rounded-full cursor-pointer transition-colors ${useFixedPrompt ? 'bg-black' : 'bg-gray-300'}`}
+                                    ></label>
                                 </div>
-                            )}
+                                <div>
+                                    <label htmlFor="fixed-prompt-toggle" className="text-sm font-bold text-gray-900 cursor-pointer select-none">
+                                        Include Fixed Prompt?
+                                    </label>
+                                    <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                                        A &quot;fixed prompt&quot; is invisible context sent to the AI (e.g. current page URL, user ID).
+                                        <br />
+                                        <span className={`font-semibold transition-colors ${useFixedPrompt ? 'text-black delay-150 duration-500 bg-yellow-100 px-1 rounded' : 'text-gray-400'}`}>
+                                            IMPORTANT: Replace <code className="font-mono text-xs">YOUR_FIXED_PROMPT</code> in the code above with your actual data.
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Field Management */}
@@ -461,13 +674,14 @@ export default function TaskEditorPage() {
                                 <h2 className="font-bold text-xl mb-6 flex items-center gap-2">
                                     Active Fields
                                     <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full">{taskFields.length}</span>
+                                    <HelpTooltip term="form_fields" label="What are form fields?" />
                                 </h2>
 
                                 <div className="space-y-3">
 
 
                                     {/* Task Fields */}
-                                    {taskFields.filter(f => f.field_type !== "runtime").map((f) => (
+                                    {taskFields.filter(f => f.field_type !== "runtime" && !f.field_label.toLowerCase().includes("additional instructions") && f.field_name !== "additional_instructions").map((f) => (
                                         <div key={f.id} className="group relative rounded-xl border border-gray-200 p-4 pr-14 transition-all hover:border-gray-400 hover:shadow-sm flex items-center justify-between">
                                             <div className="flex-1">
                                                 <div className="flex items-center justify-between mb-1">
@@ -504,7 +718,10 @@ export default function TaskEditorPage() {
                         <div className="rounded-2xl border border-gray-200 p-8 shadow-sm">
                             <div className="flex items-center justify-between mb-6">
                                 <div>
-                                    <h2 className="font-bold text-xl mb-1">Prompt Template</h2>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <h2 className="font-bold text-xl">Prompt Template</h2>
+                                        <HelpTooltip term="prompt_template" label="What is a prompt template?" />
+                                    </div>
                                     <p className="text-gray-500 text-sm">Design the final prompt that gets sent to ChatGPT.</p>
                                 </div>
                                 <div className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase transition-colors ${template === lastSavedTemplate ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
@@ -546,8 +763,8 @@ export default function TaskEditorPage() {
                                                     setTimeout(() => setStatus(""), 2000);
                                                 }}
                                                 className={`text-left px-3 py-2 rounded-lg border text-xs font-mono transition-all hover:scale-105 active:scale-95 ${isUsed
-                                                        ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
-                                                        : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
+                                                    ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
+                                                    : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
                                                     }`}
                                                 title={isUsed ? 'Used in template' : 'Not used in template'}
                                             >
@@ -564,6 +781,7 @@ export default function TaskEditorPage() {
 
                             <div className="relative group">
                                 <textarea
+                                    data-tour="template-editor"
                                     className="w-full rounded-2xl border border-gray-300 p-6 font-mono text-sm leading-relaxed focus:ring-4 focus:ring-black/5 focus:border-black outline-none transition-all resize-y min-h-[300px] bg-gray-50/30 group-hover:bg-white"
                                     value={template}
                                     onChange={(e) => setTemplate(e.target.value)}
@@ -574,35 +792,39 @@ export default function TaskEditorPage() {
                             <div className="mt-8 flex flex-col items-end gap-3">
                                 <div className="flex items-center justify-between w-full">
                                     <div className="text-xs text-gray-400">
-                                        Tip: Use <code className="bg-gray-100 px-1 rounded text-gray-700">{"{{field_name}}"}</code> to inject form data.
+                                        Tip: Use <code className="bg-gray-100 px-1 rounded text-gray-700">{`{{field_name}}`}</code> to inject form data.
                                     </div>
-                                    <button
-                                        className={`rounded-xl px-10 py-4 text-black font-graffiti text-lg transition-all shadow-lg ${template === lastSavedTemplate
-                                            ? "bg-gray-300 cursor-not-allowed shadow-none"
-                                            : "bg-scaffold-brand hover:bg-scaffold-brandHover hover:shadow-xl active:scale-95"
-                                            }`}
-                                        onClick={saveTemplate}
-                                        disabled={template === lastSavedTemplate}
-                                    >
-                                        {template === lastSavedTemplate ? "Saved" : "Save"}
-                                    </button>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => setIsImproverOpen(true)}
+                                            className="rounded-xl px-8 py-4 text-black font-graffiti text-lg transition-all shadow-lg bg-white border-2 border-gray-200 hover:border-purple-300 hover:shadow-xl active:scale-95 flex items-center gap-2"
+                                        >
+                                            ✨ Improve Template
+                                        </button>
+                                        <button
+                                            className={`rounded-xl px-10 py-4 text-black font-graffiti text-lg transition-all shadow-lg ${template === lastSavedTemplate
+                                                ? "bg-gray-300 cursor-not-allowed shadow-none"
+                                                : "bg-scaffold-brand hover:bg-scaffold-brandHover hover:shadow-xl active:scale-95"
+                                                }`}
+                                            onClick={saveTemplate}
+                                            disabled={template === lastSavedTemplate}
+                                        >
+                                            {template === lastSavedTemplate ? "Saved" : "Save"}
+                                        </button>
+                                    </div>
                                 </div>
-                                {prodEmbedUrlHint && (
-                                    <a
-                                        href={prodEmbedUrlHint}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sm font-bold text-gray-400 hover:text-black flex items-center gap-1 transition-colors"
-                                    >
-                                        Open Form Preview
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                                    </a>
-                                )}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Template Improver Popup */}
+            <TemplateImproverPopup
+                isOpen={isImproverOpen}
+                onClose={() => setIsImproverOpen(false)}
+                currentTemplate={template}
+            />
         </main>
     );
 }

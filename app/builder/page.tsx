@@ -6,6 +6,11 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import BuilderDashboardUI from "../components/BuilderDashboardUI";
 
+const FREE_TIER_LIMITS = {
+  APPS_PER_ACCOUNT: 5,
+  TASKS_PER_APP: 5,
+};
+
 type AppRow = {
   id: string;
   name: string;
@@ -78,11 +83,20 @@ export default function BuilderDashboardPage() {
         counts[app.id] = (tasksData?.tasks || []).length;
       }
       setTaskCounts(counts);
+      // Small delay to allow render
+      setTimeout(() => window.dispatchEvent(new CustomEvent('scaffold-apps-loaded')), 100);
     }
   }
 
   async function createApp(name: string) {
     setStatus("");
+    
+    // Check if at limit
+    if (apps.length >= FREE_TIER_LIMITS.APPS_PER_ACCOUNT) {
+      setStatus(`❌ App limit reached: Maximum ${FREE_TIER_LIMITS.APPS_PER_ACCOUNT} apps per account`);
+      return;
+    }
+    
     const res = await authenticatedFetch("/api/apps", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -95,6 +109,8 @@ export default function BuilderDashboardPage() {
     }
     setStatus("✅ App created");
     await refreshApps();
+    // Dispatch AFTER refresh so the new card is in the DOM
+    setTimeout(() => window.dispatchEvent(new CustomEvent('scaffold-app-created')), 500);
   }
 
   if (loading) {
@@ -107,6 +123,36 @@ export default function BuilderDashboardPage() {
 
   if (!user) {
     return null;
+  }
+
+  async function deleteApp(appId: string) {
+    if (!confirm("Are you sure you want to delete this project? This cannot be undone.")) return;
+    setStatus("");
+    const res = await authenticatedFetch(`/api/apps?id=${appId}`, { method: "DELETE" });
+    const data = await safeJson(res);
+    if (!data?.success) {
+      setStatus(`❌ Delete app failed: ${data?.error || "unknown error"}`);
+      return;
+    }
+    setStatus("✅ App deleted");
+    await refreshApps();
+  }
+
+  async function renameApp(appId: string, newName: string) {
+    if (!newName.trim()) return;
+    setStatus("");
+    const res = await authenticatedFetch(`/api/apps/${appId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: newName.trim() })
+    });
+    const data = await safeJson(res);
+    if (!data?.success) {
+      setStatus(`❌ Rename app failed: ${data?.error || "unknown error"}`);
+      return;
+    }
+    setStatus("✅ App renamed successfully");
+    await refreshApps();
   }
 
   return (
@@ -126,6 +172,9 @@ export default function BuilderDashboardPage() {
         }))}
         onAppClick={(id) => router.push(`/builder/${id}`)}
         onCreateApp={createApp}
+        onDeleteApp={deleteApp}
+        onRenameApp={renameApp}
+        appLimit={FREE_TIER_LIMITS.APPS_PER_ACCOUNT}
       />
     </>
   );
