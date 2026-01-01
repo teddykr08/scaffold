@@ -28,7 +28,7 @@ export default function DbToolsPage() {
             <div className="bg-gray-50 border p-8 rounded-xl max-w-2xl">
                 <h2 className="text-xl font-bold mb-2">Fix Legacy Data</h2>
                 <p className="mb-4 text-gray-600">
-                    If you see "Additional Instructions" in your form fields where it shouldn't be,
+                    If you see &quot;Additional Instructions&quot; in your form fields where it shouldn&apos;t be,
                     click this button to clean it up.
                 </p>
 

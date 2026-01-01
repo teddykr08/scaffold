@@ -96,7 +96,7 @@ export default function OnboardingTutorial() {
             content: (
                 <div className="text-left space-y-2">
                     <h2 className="text-xl font-bold">Welcome to Scaffold! 👋</h2>
-                    <p>Let's create your first AI prompt form in just a minute.</p>
+                    <p>Let&apos;s create your first AI prompt form in just a minute.</p>
                     <ul className="list-disc pl-5 text-sm space-y-1 opacity-80">
                         <li>Build AI tools without code</li>
                         <li>Embed them anywhere</li>
@@ -114,7 +114,7 @@ export default function OnboardingTutorial() {
             content: (
                 <div className="text-left space-y-2">
                     <h3 className="font-bold flex items-center gap-2">Example Projects 📚</h3>
-                    <p>We've created 3 examples for you to explore.</p>
+                    <p>We&apos;ve created 3 examples for you to explore.</p>
                     <ul className="list-disc pl-5 text-sm space-y-1 opacity-80">
                         <li><b>Recipe Genius</b>: Formless task (uses URL data)</li>
                         <li><b>Study Tutor</b>: Standard form with inputs</li>
@@ -132,10 +132,10 @@ export default function OnboardingTutorial() {
             content: (
                 <div className="text-left space-y-2">
                     <h3 className="font-bold">Create Your First Project 🚀</h3>
-                    <p>Projects hold your forms. Let's make one now.</p>
+                    <p>Projects hold your forms. Let&apos;s make one now.</p>
                     <ul className="list-disc pl-5 text-sm space-y-1 opacity-80">
-                        <li>Give it a name like <b>"My First App"</b></li>
-                        <li>Click <b>"Create App"</b> when done</li>
+                        <li>Give it a name like <b>&quot;My First App&quot;</b></li>
+                        <li>Click <b>&quot;Create App&quot;</b> when done</li>
                     </ul>
                 </div>
             ),
@@ -185,9 +185,9 @@ export default function OnboardingTutorial() {
                     <h3 className="font-bold">Create a Task ⚡</h3>
                     <p>Tasks are the actual actions your AI will perform.</p>
                     <ul className="list-disc pl-5 text-sm space-y-1 opacity-80">
-                        <li>Click <b>"New Task"</b></li>
-                        <li>Name it (e.g. "Write Email")</li>
-                        <li>Click <b>"Create"</b></li>
+                        <li>Click <b>&quot;New Task&quot;</b></li>
+                        <li>Name it (e.g. &quot;Write Email&quot;)</li>
+                        <li>Click <b>&quot;Create&quot;</b></li>
                     </ul>
                 </div>
             ),
@@ -210,7 +210,7 @@ export default function OnboardingTutorial() {
             content: (
                 <div className="text-left space-y-2">
                     <h3 className="font-bold">Open Task Editor ✏️</h3>
-                    <p>Task created! Now let's build the form.</p>
+                    <p>Task created! Now let&apos;s build the form.</p>
                     <p><b>Click on your new task card</b> to open the editor.</p>
                 </div>
             ),
@@ -226,8 +226,8 @@ export default function OnboardingTutorial() {
                     <h3 className="font-bold">Add Input Fields 📝</h3>
                     <p>Fields are questions your users will answer.</p>
                     <ul className="list-disc pl-5 text-sm space-y-1 opacity-80">
-                        <li>Add a field like <b>"Topic"</b> or <b>"Tone"</b></li>
-                        <li>Click <b>"Add Field"</b> to save it</li>
+                        <li>Add a field like <b>&quot;Topic&quot;</b> or <b>&quot;Tone&quot;</b></li>
+                        <li>Click <b>&quot;Add Field&quot;</b> to save it</li>
                     </ul>
                 </div>
             ),
@@ -243,7 +243,7 @@ export default function OnboardingTutorial() {
                     <h3 className="font-bold">The Prompt Template 🤖</h3>
                     <p>This is where the magic happens. You write instructions for the AI.</p>
                     <div className="bg-gray-100 p-3 rounded-lg text-xs font-mono my-2 text-gray-700">
-                        "Write a blog post about <span className="text-blue-600 font-bold">{"{{topic}}"}</span>..."
+                        &quot;Write a blog post about <span className="text-blue-600 font-bold">{"{{topic}}"}</span>...&quot;
                     </div>
                     <p>Use the <b>variable buttons</b> on the left to insert user answers.</p>
                 </div>
@@ -273,11 +273,11 @@ export default function OnboardingTutorial() {
         {
             content: (
                 <div className="text-left space-y-2">
-                    <h2 className="text-xl font-bold">You're a Pro! 🎉</h2>
-                    <p>You've built your first AI tool. Now go build something amazing.</p>
+                    <h2 className="text-xl font-bold">You&apos;re a Pro! 🎉</h2>
+                    <p>You&apos;ve built your first AI tool. Now go build something amazing.</p>
                     <button className="bg-black text-white px-4 py-2 rounded-lg font-bold text-sm mt-2 w-full" onClick={() => {
                         // Custom finish action if needed
-                    }}>Let's Go!</button>
+                    }}>Let&apos;s Go!</button>
                 </div>
             ),
             target: 'body',
