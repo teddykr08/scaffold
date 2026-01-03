@@ -63,12 +63,21 @@ export async function GET(req: NextRequest) {
 
 // POST /api/tasks - Create a new task
 export async function POST(req: NextRequest) {
+    console.log('═══════════════════════════════════');
+    console.log('📥 POST /api/tasks - Request received');
+    console.log('📥 Timestamp:', new Date().toISOString());
+    
     try {
         const supabaseServer = getSupabaseServer();
         const body = await req.json();
+        console.log('📥 Request body:', body);
+        console.log('📥 app_id:', body.app_id);
+        console.log('📥 name:', body.name);
+        
         const { app_id, name, description, has_form } = body;
 
         if (!app_id || !name) {
+            console.log('❌ Missing required fields - app_id:', app_id, 'name:', name);
             return NextResponse.json(
                 { success: false, error: "Missing app_id or name" },
                 { status: 400 }
@@ -76,7 +85,9 @@ export async function POST(req: NextRequest) {
         }
 
         const authHeader = req.headers.get("authorization");
+        console.log('📥 Auth header present:', !!authHeader);
         if (!authHeader) {
+            console.log('❌ No authorization header');
             return NextResponse.json(
                 { success: false, error: "Unauthorized" },
                 { status: 401 }
@@ -87,11 +98,14 @@ export async function POST(req: NextRequest) {
         const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
 
         if (userError || !user) {
+            console.log('❌ Auth failed:', userError?.message);
             return NextResponse.json(
                 { success: false, error: "Unauthorized" },
                 { status: 401 }
             );
         }
+        
+        console.log('✅ User authenticated:', user.id);
 
         const { data, error } = await supabaseServer
             .from("tasks")
@@ -106,17 +120,23 @@ export async function POST(req: NextRequest) {
             .single();
 
         if (error) {
+            console.error('❌ Database error:', error);
             return NextResponse.json(
                 { success: false, error: error.message },
                 { status: 500 }
             );
         }
 
+        console.log('✅ Task created successfully:', data);
+        console.log('═══════════════════════════════════');
         return NextResponse.json({ success: true, task: data });
-    } catch (error) {
-        console.error("[tasks] POST error:", error);
+    } catch (error: any) {
+        console.error('❌ Error in POST /api/tasks:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        console.log('═══════════════════════════════════');
         return NextResponse.json(
-            { success: false, error: "Internal server error" },
+            { success: false, error: error.message || "Internal server error" },
             { status: 500 }
         );
     }

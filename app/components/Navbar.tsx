@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { createClient } from "@supabase/supabase-js";
 
 export default function Navbar() {
   const { user, signOut } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [appName, setAppName] = useState<string>("");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
@@ -16,6 +18,71 @@ export default function Navbar() {
   // Pages where nav links should be visible
   const publicPages = ["/", "/how-it-works", "/faq", "/pricing", "/contact"];
   const showNavLinks = publicPages.includes(pathname || "");
+
+  // Determine current context
+  const isBuilderDashboard = pathname === "/builder";
+  const isAppTasksPage = pathname?.match(/^\/builder\/[^/]+$/);
+  const isTaskEditorPage = pathname?.match(/^\/builder\/[^/]+\/[^/]+$/);
+  const appId = isAppTasksPage?.[0].split("/")[2] || isTaskEditorPage?.[0].split("/")[2];
+  const taskName = isTaskEditorPage?.[0].split("/")[3];
+
+  // Fetch app name with localStorage caching
+  useEffect(() => {
+    if (isTaskEditorPage && appId && user) {
+      // Try to load from cache first
+      const cacheKey = `app_name_${appId}`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        setAppName(cached);
+      }
+
+      // Listen for app name from task editor page (fastest - no fetch needed)
+      const handleAppName = (event: CustomEvent) => {
+        if (event.detail?.appId === appId && event.detail?.name) {
+          setAppName(event.detail.name);
+          localStorage.setItem(cacheKey, event.detail.name);
+        }
+      };
+
+      window.addEventListener('scaffold-app-name', handleAppName as EventListener);
+
+      // Only fetch if no cached value (fallback) and user is authenticated
+      if (!cached && user) {
+        const fetchAppName = async () => {
+          try {
+            const supabase = createClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+            );
+            const { data: { session } } = await supabase.auth.getSession();
+            
+            if (!session?.access_token) {
+              console.error("No access token available");
+              return;
+            }
+
+            const res = await fetch(`/api/apps/${appId}`, {
+              headers: {
+                'Authorization': `Bearer ${session.access_token}`
+              }
+            });
+            const data = await res.json();
+            if (data?.success && data?.app?.name) {
+              setAppName(data.app.name);
+              localStorage.setItem(cacheKey, data.app.name);
+            }
+          } catch (error) {
+            console.error("Error fetching app name:", error);
+          }
+        };
+        fetchAppName();
+      }
+
+      return () => {
+        window.removeEventListener('scaffold-app-name', handleAppName as EventListener);
+      };
+    }
+  }, [isTaskEditorPage, appId, user]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -43,13 +110,43 @@ export default function Navbar() {
     return null;
   }
 
-  return (
-    <header className="w-full border-b border-gray-200 bg-white sticky top-0 z-50">
-      <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
-        {/* Left: Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <span className="font-graffiti text-2xl text-black">scaffold</span>
+  // Render left side based on context
+  const renderLeftSide = () => {
+    // Task Editor: Back arrow + App name + "Project" + task name subtitle
+    if (isTaskEditorPage && appId) {
+      return (
+        <Link href={`/builder/${appId}`} className="flex items-center gap-2 group">
+          <svg className="w-5 h-5 text-gray-500 group-hover:text-black transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
+          </svg>
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="font-graffiti text-2xl text-black">{appName || "Project"}</span>
+              <span className="text-sm text-gray-400 font-medium">Project</span>
+            </div>
+            {taskName && (
+              <span className="text-xs text-gray-400 font-medium -mt-1">
+                {decodeURIComponent(taskName).replace(/_/g, ' ')}
+              </span>
+            )}
+          </div>
         </Link>
+      );
+    }
+
+    // Default: Scaffold logo (for app tasks page and others)
+    return (
+      <Link href="/" className="flex items-center gap-2">
+        <span className="font-graffiti text-2xl text-black">scaffold</span>
+      </Link>
+    );
+  };
+
+  return (
+    <header className="w-full border-b border-gray-200 bg-white sticky top-0 z-[10002]">
+      <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
+        {/* Left: Context-aware navigation */}
+        {renderLeftSide()}
 
         {/* Center: Links (Desktop) - Only show on public marketing pages */}
         {showNavLinks && (

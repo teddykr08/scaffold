@@ -10,7 +10,7 @@ export default function Page() {
         </div>
 
         <p className="text-xl max-w-2xl mx-auto mb-10 text-gray-700 leading-relaxed tracking-wider font-medium">
-          AI Prompts Made Simple
+          Add AI to your app without API keys or complex setup—build intelligent forms and chatbots in minutes
         </p>
 
         <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 relative z-10">
@@ -25,7 +25,7 @@ export default function Page() {
             href="/demo"
             className="w-full sm:w-auto px-8 py-4 border border-gray-200 rounded-xl font-bold bg-white/50 backdrop-blur-sm hover:bg-white transition-all text-center"
           >
-            See Demo
+            Try Demo
           </Link>
 
           <Link

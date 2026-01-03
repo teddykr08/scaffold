@@ -22,6 +22,7 @@ function EmbedFormInner() {
   const fixedContentFromUrl = searchParams.get("fixed");
   const colorFromUrl = searchParams.get("color");
   const fontFromUrl = searchParams.get("font");
+  const fieldListFromUrl = searchParams.get("field_list");
 
   const [fields, setFields] = useState<FieldRow[]>([]);
   const [task, setTask] = useState<{ has_form: boolean } | null>(null);
@@ -79,20 +80,35 @@ function EmbedFormInner() {
           defaults[f.field_name] = f.default_value;
         }
       });
+      
+      // Apply URL parameter values (these override defaults)
+      if (fieldListFromUrl) {
+        defaults['field_list'] = fieldListFromUrl;
+      }
+      
       setValues(defaults);
     }
 
     fetchData();
-  }, [appIdParam, taskNameParam, colorFromUrl, fontFromUrl]);
+  }, [appIdParam, taskNameParam, colorFromUrl, fontFromUrl, fieldListFromUrl]);
 
-  // Auto-generate prompt for formless tasks (has_form = false)
+  // Auto-generate prompt for formless tasks OR tasks with no visible fields (all are URL-provided)
   useEffect(() => {
-    if (task?.has_form === false && !generatedPrompt && appIdParam && taskNameParam) {
-      // Auto-submit for formless tasks
+    const visibleFields = fields.filter((f) => 
+      f.field_type !== "runtime" && 
+      !f.field_label.toLowerCase().includes("additional instructions") && 
+      f.field_name !== "additional_instructions" &&
+      f.field_name !== "field_list" && // field_list is hidden since it comes from URL
+      f.field_name !== "purpose" && // Hide purpose field
+      f.field_name !== "requirements" // Hide requirements field
+    );
+    
+    if ((task?.has_form === false || visibleFields.length === 0) && !generatedPrompt && appIdParam && taskNameParam && fields.length > 0) {
+      // Auto-submit for formless tasks or when all fields are pre-filled via URL
       handleSubmit();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [task, appIdParam, taskNameParam]);
+  }, [task, appIdParam, taskNameParam, fields]);
 
   async function handleSubmit() {
     setStatus("");
@@ -106,7 +122,13 @@ function EmbedFormInner() {
     const appId = appIdParam;
     const taskName = taskNameParam;
 
-    const allVisibleFields = fields.filter(f => f.field_type !== "runtime");
+    // Only check visible fields that aren't hidden by URL params
+    const allVisibleFields = fields.filter(f => 
+      f.field_type !== "runtime" &&
+      f.field_name !== "field_list" && // Skip validation for URL-provided fields
+      f.field_name !== "purpose" &&
+      f.field_name !== "requirements"
+    );
 
     for (const field of allVisibleFields) {
       if (field.required) {
@@ -309,7 +331,14 @@ function EmbedFormInner() {
         <div className="card-container p-6 md:p-10 space-y-6">
 
           {fields
-            .filter((f) => f.field_type !== "runtime" && !f.field_label.toLowerCase().includes("additional instructions") && f.field_name !== "additional_instructions")
+            .filter((f) => 
+              f.field_type !== "runtime" && 
+              !f.field_label.toLowerCase().includes("additional instructions") && 
+              f.field_name !== "additional_instructions" &&
+              f.field_name !== "field_list" && // Hide field_list since it comes from URL
+              f.field_name !== "purpose" && // Hide purpose field
+              f.field_name !== "requirements" // Hide requirements field
+            )
             .map((field) => renderField(field))}
         </div>
 

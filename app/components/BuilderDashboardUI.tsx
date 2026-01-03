@@ -72,7 +72,7 @@ export default function BuilderDashboardUI({
                         <p className="text-gray-500 mt-2 text-xl font-medium uppercase tracking-[0.2em]">Manage your AI form projects</p>
                     </div>
                     <div className="text-right">
-                        <div className="text-sm font-bold text-gray-700">{apps.length} / {appLimit} apps</div>
+                        <div className="text-sm font-bold text-gray-700">{apps.length} / {appLimit} projects</div>
                         <div className="text-xs text-gray-500">Free tier limit</div>
                     </div>
                 </div>
@@ -92,7 +92,7 @@ export default function BuilderDashboardUI({
                                 <div className="absolute top-6 right-6">
                                     <ActionMenu
                                         itemType="project"
-                                        onRename={() => {
+                                        onEdit={() => {
                                             setRenameAppId(app.id);
                                             setRenameAppName(app.name);
                                             setRenameModalOpen(true);
@@ -134,6 +134,7 @@ export default function BuilderDashboardUI({
                         <h3 className="text-2xl font-bold text-gray-900 mb-8">Create New Project</h3>
                         <div className="w-full space-y-4 relative z-10">
                             <input
+                                data-tour="project-name-input"
                                 type="text"
                                 placeholder="Project name..."
                                 value={newAppName}
@@ -147,7 +148,7 @@ export default function BuilderDashboardUI({
                                 onClick={handleCreate}
                                 className="w-full rounded-2xl bg-scaffold-brand text-black py-4 font-graffiti text-lg hover:bg-scaffold-brandHover transition-all shadow-xl hover:shadow-scaffold-brand/20 active:scale-95"
                             >
-                                Create App
+                                Create Project
                             </button>
                         </div>
                     </div>

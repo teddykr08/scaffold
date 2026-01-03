@@ -92,6 +92,8 @@ export async function POST(req: NextRequest) {
                 order: order || 1,
                 options: options || null,
                 default_value: default_value || null,
+                min: body.min !== undefined ? body.min : null,
+                max: body.max !== undefined ? body.max : null,
                 user_id: user.id
             }])
             .select()
@@ -162,6 +164,71 @@ export async function DELETE(req: NextRequest) {
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("[task-fields] DELETE error:", error);
+        return NextResponse.json(
+            { success: false, error: "Internal server error" },
+            { status: 500 }
+        );
+    }
+}
+
+// PUT /api/task-fields - Update an existing task field
+export async function PUT(req: NextRequest) {
+    try {
+        const supabaseServer = getSupabaseServer();
+        const body = await req.json();
+        const { id, field_label, field_type, required, options, min, max } = body;
+
+        if (!id) {
+            return NextResponse.json(
+                { success: false, error: "Missing field id" },
+                { status: 400 }
+            );
+        }
+
+        const authHeader = req.headers.get("authorization");
+        if (!authHeader) {
+            return NextResponse.json(
+                { success: false, error: "Unauthorized" },
+                { status: 401 }
+            );
+        }
+
+        const token = authHeader.replace("Bearer ", "");
+        const { data: { user }, error: userError } = await supabaseServer.auth.getUser(token);
+
+        if (userError || !user) {
+            return NextResponse.json(
+                { success: false, error: "Unauthorized" },
+                { status: 401 }
+            );
+        }
+
+        const updates: any = {};
+        if (field_label !== undefined) updates.field_label = field_label;
+        if (field_type !== undefined) updates.field_type = field_type;
+        if (required !== undefined) updates.required = required;
+        if (options !== undefined) updates.options = options;
+        if (min !== undefined) updates.min = min;
+        if (max !== undefined) updates.max = max;
+
+        const { data, error } = await supabaseServer
+            .from("task_fields")
+            .update(updates)
+            .eq("id", id)
+            .eq("user_id", user.id)
+            .select()
+            .single();
+
+        if (error) {
+            return NextResponse.json(
+                { success: false, error: error.message },
+                { status: 500 }
+            );
+        }
+
+        return NextResponse.json({ success: true, field: data });
+    } catch (error) {
+        console.error("[task-fields] PUT error:", error);
         return NextResponse.json(
             { success: false, error: "Internal server error" },
             { status: 500 }

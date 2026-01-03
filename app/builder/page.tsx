@@ -67,9 +67,11 @@ export default function BuilderDashboardPage() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    refreshApps();
+    if (user) {
+      refreshApps();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   async function refreshApps() {
     const res = await authenticatedFetch("/api/apps", { method: "GET" });
@@ -135,6 +137,11 @@ export default function BuilderDashboardPage() {
       return;
     }
     setStatus("✅ App deleted");
+    
+    // Immediately remove from local state for instant UI update
+    setApps(prevApps => prevApps.filter(app => app.id !== appId));
+    
+    // Then refresh to ensure sync with backend
     await refreshApps();
   }
 

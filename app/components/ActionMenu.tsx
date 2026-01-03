@@ -3,12 +3,12 @@
 import { useState, useRef, useEffect } from "react";
 
 interface ActionMenuProps {
-  onRename: () => void;
+  onEdit: () => void;
   onDelete: () => void;
   itemType?: string; // "project", "task", etc.
 }
 
-export default function ActionMenu({ onRename, onDelete, itemType = "item" }: ActionMenuProps) {
+export default function ActionMenu({ onEdit, onDelete, itemType = "item" }: ActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -56,14 +56,14 @@ export default function ActionMenu({ onRename, onDelete, itemType = "item" }: Ac
       {/* Dropdown menu */}
       {isOpen && (
         <div
-          className="absolute right-0 top-10 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-30"
+          className="absolute right-0 top-1/2 -translate-y-1/2 mr-10 w-36 bg-white rounded-lg shadow-xl border border-gray-200 py-1 z-[99999]"
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={(e) => {
               e.stopPropagation();
               setIsOpen(false);
-              onRename();
+              onEdit();
             }}
             className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-gray-50 transition-colors flex items-center gap-2"
           >
@@ -80,7 +80,7 @@ export default function ActionMenu({ onRename, onDelete, itemType = "item" }: Ac
             >
               <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
             </svg>
-            Rename
+            Edit
           </button>
           <button
             onClick={(e) => {

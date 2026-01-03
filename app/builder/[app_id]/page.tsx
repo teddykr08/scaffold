@@ -115,11 +115,12 @@ export default function AppDetailPage() {
     }, [user, loading, router]);
 
     useEffect(() => {
-        if (!appId) return;
-        refreshApp();
-        refreshTasks();
+        if (user && appId) {
+            refreshApp();
+            refreshTasks();
+        }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [appId]);
+    }, [user, appId]);
 
     async function refreshApp() {
         const res = await authenticatedFetch("/api/apps", { method: "GET" });
@@ -165,24 +166,29 @@ export default function AppDetailPage() {
             return;
         }
 
-        const res = await authenticatedFetch("/api/tasks", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                app_id: appId,
-                name: slugifyFieldName(name),
-            }),
-        });
-        const data = await safeJson(res);
-        if (!data?.success) {
-            setStatus(`❌ Create task failed: ${data?.error || "unknown error"}`);
-            return;
+        try {
+            const res = await authenticatedFetch("/api/tasks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    app_id: appId,
+                    name: slugifyFieldName(name),
+                }),
+            });
+            const data = await safeJson(res);
+            if (!data?.success) {
+                setStatus(`❌ Create task failed: ${data?.error || "unknown error"}`);
+                return;
+            }
+            setStatus("✅ Task created");
+            setNewTaskName("");
+            setShowNewTaskModal(false);
+            window.dispatchEvent(new CustomEvent('scaffold-task-created'));
+            await refreshTasks();
+        } catch (error) {
+            console.error('Error creating task:', error);
+            setStatus(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
-        setStatus("✅ Task created");
-        setNewTaskName("");
-        setShowNewTaskModal(false);
-        window.dispatchEvent(new CustomEvent('scaffold-task-created'));
-        await refreshTasks();
     }
 
     async function renameTask(taskId: string, newName: string) {
@@ -200,6 +206,24 @@ export default function AppDetailPage() {
             return;
         }
         setStatus("✅ Task renamed successfully");
+        await refreshTasks();
+    }
+
+    async function deleteTask(taskId: string, taskName: string) {
+        if (!confirm(`Are you sure you want to delete the task "${taskName}"? This cannot be undone.`)) return;
+        setStatus("");
+        const res = await authenticatedFetch(`/api/tasks?id=${taskId}`, { method: "DELETE" });
+        const data = await safeJson(res);
+        if (!data?.success) {
+            setStatus(`❌ Delete task failed: ${data?.error || "unknown error"}`);
+            return;
+        }
+        setStatus("✅ Task deleted");
+        
+        // Immediately remove from local state
+        setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+        
+        // Then refresh to ensure sync
         await refreshTasks();
     }
 
@@ -229,7 +253,7 @@ export default function AppDetailPage() {
                     </Link>
                     <div className="flex justify-between items-end">
                         <div>
-                            <h1 className="font-graffiti text-5xl tracking-tight text-black">{app?.name || "App"}</h1>
+                            <h1 className="font-graffiti text-5xl tracking-tight text-black">{app?.name || "Project"}</h1>
                             <p className="text-gray-500 mt-1 font-medium">
                                 {tasks.length} task{tasks.length !== 1 ? "s" : ""}
                             </p>
@@ -259,22 +283,13 @@ export default function AppDetailPage() {
                             <div className="absolute top-4 right-4">
                                 <ActionMenu
                                     itemType="task"
-                                    onRename={() => {
+                                    onEdit={() => {
                                         setRenameTaskId(task.id);
                                         setRenameTaskName(task.name);
                                         setRenameModalOpen(true);
                                     }}
                                     onDelete={async () => {
-                                        if (!confirm(`Are you sure you want to delete task "${task.name}"?`)) return;
-                                        setStatus("");
-                                        const res = await authenticatedFetch(`/api/tasks?id=${task.id}`, { method: "DELETE" });
-                                        const data = await safeJson(res);
-                                        if (!data?.success) {
-                                            setStatus(`❌ Delete task failed: ${data?.error || "unknown error"}`);
-                                            return;
-                                        }
-                                        setStatus("✅ Task deleted");
-                                        await refreshTasks();
+                                        await deleteTask(task.id, task.name);
                                     }}
                                 />
                             </div>

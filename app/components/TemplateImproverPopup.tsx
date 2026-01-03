@@ -6,12 +6,14 @@ interface TemplateImproverPopupProps {
   isOpen: boolean;
   onClose: () => void;
   currentTemplate: string;
+  fieldList?: string[];
 }
 
 export default function TemplateImproverPopup({
   isOpen,
   onClose,
   currentTemplate,
+  fieldList = [],
 }: TemplateImproverPopupProps) {
   // Close on Escape key
   useEffect(() => {
@@ -40,7 +42,9 @@ export default function TemplateImproverPopup({
   if (!isOpen) return null;
 
   const improverAppId = process.env.NEXT_PUBLIC_IMPROVER_APP_ID || '87c1a384-47ff-41af-aa81-b72ba6f08b37';
-  const embedUrl = `/embed/form?app_id=${encodeURIComponent(improverAppId)}&task_name=improve_template&current_template=${encodeURIComponent(currentTemplate)}`;
+  const fieldListStr = fieldList.join(', ');
+  const fixedContent = `Current Template: ${currentTemplate}\n\nFields: ${fieldListStr}`;
+  const embedUrl = `/embed/form?app_id=${encodeURIComponent(improverAppId)}&task_name=improve_template&fixed=${encodeURIComponent(fixedContent)}`;
 
   return (
     <div
