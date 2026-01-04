@@ -15,9 +15,6 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 );
 
-// Export for use in other components
-export { supabase };
-
 type AppRow = {
     id: string;
     name: string;
