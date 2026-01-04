@@ -211,22 +211,72 @@ export async function PUT(req: NextRequest) {
         if (min !== undefined) updates.min = min;
         if (max !== undefined) updates.max = max;
 
+        // First, get the field to check app ownership
+        const { data: existingField, error: fetchError } = await supabaseServer
+            .from("task_fields")
+            .select("app_id")
+            .eq("id", id)
+            .single();
+
+        if (fetchError || !existingField) {
+            console.error("[task-fields] PUT: Field not found", { id, error: fetchError });
+            return NextResponse.json(
+                { success: false, error: "Field not found" },
+                { status: 404 }
+            );
+        }
+
+        // Check if the app exists and belongs to the user
+        const { data: app, error: appError } = await supabaseServer
+            .from("apps")
+            .select("user_id")
+            .eq("id", existingField.app_id)
+            .single();
+
+        if (appError || !app) {
+            console.warn("[task-fields] PUT: App not found for field", { 
+                fieldId: id, 
+                appId: existingField.app_id,
+                error: appError 
+            });
+            // App doesn't exist but field does (orphaned field)
+            // Allow the update but log the issue
+            console.log("[task-fields] PUT: Allowing update for orphaned field");
+        } else if (app.user_id !== user.id) {
+            console.error("[task-fields] PUT: Unauthorized - app belongs to different user", { 
+                appUserId: app.user_id, 
+                requestUserId: user.id 
+            });
+            return NextResponse.json(
+                { success: false, error: "Unauthorized" },
+                { status: 403 }
+            );
+        }
+
+        // Update the field
         const { data, error } = await supabaseServer
             .from("task_fields")
             .update(updates)
             .eq("id", id)
-            .eq("user_id", user.id)
-            .select()
-            .single();
+            .select();
 
         if (error) {
+            console.error("[task-fields] PUT Supabase error:", error);
             return NextResponse.json(
                 { success: false, error: error.message },
                 { status: 500 }
             );
         }
 
-        return NextResponse.json({ success: true, field: data });
+        if (!data || data.length === 0) {
+            console.error("[task-fields] PUT: No rows updated", { id });
+            return NextResponse.json(
+                { success: false, error: "Field not found" },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json({ success: true, field: data[0] });
     } catch (error) {
         console.error("[task-fields] PUT error:", error);
         return NextResponse.json(

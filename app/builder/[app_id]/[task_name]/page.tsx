@@ -9,6 +9,15 @@ import HelpTooltip from "../../../components/HelpTooltip";
 import TemplateImproverPopup from "../../../components/TemplateImproverPopup";
 import ActionMenu from "../../../components/ActionMenu";
 
+// Create a single shared Supabase client instance
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+);
+
+// Export for use in other components
+export { supabase };
+
 type AppRow = {
     id: string;
     name: string;
@@ -76,17 +85,16 @@ async function authenticatedFetch(
     url: string,
     options: RequestInit & { isPublic?: boolean } = {}
 ) {
+    console.log("authenticatedFetch called:", url, options.method);
     const { isPublic = false, ...fetchOptions } = options;
 
     if (!isPublic) {
-        const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-        );
-
+        console.log("Getting Supabase session...");
+        
         const {
             data: { session },
         } = await supabase.auth.getSession();
+        console.log("Session retrieved:", !!session);
 
         if (session?.access_token) {
             fetchOptions.headers = {
@@ -96,7 +104,10 @@ async function authenticatedFetch(
         }
     }
 
-    return fetch(url, fetchOptions);
+    console.log("About to fetch:", url);
+    const result = await fetch(url, fetchOptions);
+    console.log("Fetch completed:", result.status);
+    return result;
 }
 
 function validateTemplate(template: string, fields: FieldRow[]): string | null {
@@ -109,6 +120,263 @@ function validateTemplate(template: string, fields: FieldRow[]): string | null {
     }
 
     return null;
+}
+
+// Extract FieldCreator completely outside the main component
+function FieldCreator({
+    kind,
+    onAdd,
+    nextOrder,
+    editingField,
+    onUpdate,
+    onCancelEdit,
+}: {
+    kind: "global" | "task";
+    onAdd: (f: Partial<FieldRow>) => Promise<void>;
+    nextOrder: number;
+    editingField?: FieldRow | null;
+    onUpdate?: (fieldId: string, updates: Partial<FieldRow>) => Promise<void>;
+    onCancelEdit?: () => void;
+}) {
+    const [label, setLabel] = useState("");
+    const [name, setName] = useState("");
+    const [type, setType] = useState<FieldType>("text");
+    const [required, setRequired] = useState(true);
+    const [options, setOptions] = useState<string>("");
+    const [hasMin, setHasMin] = useState(false);
+    const [hasMax, setHasMax] = useState(false);
+    const [minValue, setMinValue] = useState<string>("0");
+    const [maxValue, setMaxValue] = useState<string>("100");
+
+    // Update form when editingField changes
+    useEffect(() => {
+        if (editingField) {
+            setLabel(editingField.field_label);
+            setName(editingField.field_name);
+            setType(editingField.field_type);
+            setRequired(editingField.required);
+            setOptions(editingField.options?.join("\n") || "");
+            setHasMin(editingField.min != null);
+            setHasMax(editingField.max != null);
+            setMinValue(editingField.min?.toString() || "0");
+            setMaxValue(editingField.max?.toString() || "100");
+        } else {
+            // Reset form when not editing
+            setLabel("");
+            setName("");
+            setType("text");
+            setRequired(true);
+            setOptions("");
+            setHasMin(false);
+            setHasMax(false);
+            setMinValue("0");
+            setMaxValue("100");
+        }
+    }, [editingField]);
+
+    const handleSave = async () => {
+        console.log("handleSave called, editingField:", editingField);
+        if (editingField && onUpdate) {
+            console.log("Calling onUpdate with id:", editingField.id);
+            const updates: Partial<FieldRow> = {
+                field_label: label.trim(),
+                field_name: slugifyFieldName(name || label),
+                field_type: type,
+                required,
+            };
+            if (type === "number") {
+                updates.min = hasMin ? parseFloat(minValue) : null;
+                updates.max = hasMax ? parseFloat(maxValue) : null;
+            }
+            if (type === "select") {
+                updates.options = options.split("\n").map(o => o.trim()).filter(Boolean);
+            }
+            console.log("Update data:", updates);
+            await onUpdate(editingField.id, updates);
+            console.log("onUpdate completed, waiting before clearing form...");
+            
+            // Wait a bit for the state to settle
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            if (onCancelEdit) {
+                console.log("Calling onCancelEdit to clear edit mode");
+                onCancelEdit();
+            }
+        } else {
+            console.log("Adding new field");
+            const fieldData: Partial<FieldRow> = {
+                field_label: label.trim(),
+                field_name: slugifyFieldName(name || label),
+                field_type: type,
+                required,
+                order: nextOrder,
+                options: null,
+                default_value: null,
+            };
+            if (type === "number") {
+                fieldData.min = hasMin ? parseFloat(minValue) : null;
+                fieldData.max = hasMax ? parseFloat(maxValue) : null;
+            }
+            if (type === "select") {
+                fieldData.options = options.split("\n").map(o => o.trim()).filter(Boolean);
+            }
+            await onAdd(fieldData);
+        }
+    };
+
+    return (
+        <div data-tour="add-field" className="rounded-2xl border border-gray-200 bg-gray-50/50 p-6 shadow-sm">
+            <div className="flex items-center justify-between mb-6">
+                <div className="font-bold text-lg text-gray-900">
+                    {editingField ? "Edit Field" : "Add New Field"}
+                </div>
+                {editingField && onCancelEdit && (
+                    <button
+                        onClick={onCancelEdit}
+                        className="text-sm text-gray-500 hover:text-black font-semibold"
+                    >
+                        Cancel
+                    </button>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">
+                        Label
+                        <span className="block text-[10px] normal-case font-medium text-gray-400 mt-0.5">this will be in the question field on the form</span>
+                    </label>
+                    <input
+                        className="w-full rounded-xl border border-gray-300 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-black"
+                        value={label}
+                        onChange={(e) => {
+                            setLabel(e.target.value);
+                            if (!name && !editingField) setName(slugifyFieldName(e.target.value));
+                        }}
+                        placeholder="e.g. Your Name"
+                    />
+                </div>
+
+                <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Field Name (API)</label>
+                    <input
+                        className="w-full rounded-xl border border-gray-300 px-4 py-2.5 bg-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                        value={name}
+                        onChange={(e) => setName(slugifyFieldName(e.target.value))}
+                        placeholder="e.g. user_name"
+                        disabled={!!editingField}
+                    />
+                </div>
+
+                <div>
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Type</label>
+                    <select
+                        className="w-full rounded-xl border border-gray-300 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-black"
+                        value={type}
+                        onChange={(e) => setType(e.target.value as FieldType)}
+                    >
+                        <option value="text">Short Text</option>
+                        <option value="textarea">Long Text (Textarea)</option>
+                        <option value="number">Number</option>
+                        <option value="select">Dropdown (Select)</option>
+                    </select>
+                </div>
+
+                <div className="flex items-end pb-2">
+                    <label className="flex items-center gap-3 cursor-pointer group">
+                        <div className="relative">
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={required}
+                                onChange={(e) => setRequired(e.target.checked)}
+                            />
+                            <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
+                        </div>
+                        <span className="text-sm font-semibold text-gray-700 group-hover:text-black transition-colors">Required Field</span>
+                    </label>
+                </div>
+            </div>
+
+            {/* Number Field Min/Max */}
+            {type === "number" && (
+                <div className="mt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
+                    <div className="text-xs font-bold text-gray-700 mb-3 uppercase tracking-wider">Number Constraints</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="flex items-center gap-3 cursor-pointer group mb-2">
+                                <input
+                                    type="checkbox"
+                                    checked={hasMin}
+                                    onChange={(e) => setHasMin(e.target.checked)}
+                                    className="w-4 h-4"
+                                />
+                                <span className="text-sm font-semibold text-gray-700">Set Minimum</span>
+                            </label>
+                            {hasMin && (
+                                <input
+                                    type="number"
+                                    value={minValue}
+                                    onChange={(e) => setMinValue(e.target.value)}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-sm"
+                                    placeholder="Min value"
+                                />
+                            )}
+                        </div>
+                        <div>
+                            <label className="flex items-center gap-3 cursor-pointer group mb-2">
+                                <input
+                                    type="checkbox"
+                                    checked={hasMax}
+                                    onChange={(e) => setHasMax(e.target.checked)}
+                                    className="w-4 h-4"
+                                />
+                                <span className="text-sm font-semibold text-gray-700">Set Maximum</span>
+                            </label>
+                            {hasMax && (
+                                <input
+                                    type="number"
+                                    value={maxValue}
+                                    onChange={(e) => setMaxValue(e.target.value)}
+                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-sm"
+                                    placeholder="Max value"
+                                />
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Dropdown Options */}
+            {type === "select" && (
+                <div className="mt-4 p-4 bg-purple-50/50 rounded-xl border border-purple-100">
+                    <label className="text-xs font-bold text-gray-700 mb-2 block uppercase tracking-wider">Dropdown Options (one per line)</label>
+                    <textarea
+                        value={options}
+                        onChange={(e) => setOptions(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-sm font-mono min-h-[120px]"
+                        placeholder={"option 1\noption 2\noption 3"}
+                    />
+                    <div className="text-xs text-gray-500 mt-2">Each line will become one option in the dropdown</div>
+                </div>
+            )}
+
+            <div className="mt-8 flex items-center gap-3">
+                <button
+                    type="button"
+                    className="w-full md:w-auto rounded-xl bg-scaffold-brand px-8 py-3 text-black font-graffiti text-lg hover:bg-scaffold-brandHover transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
+                    disabled={!label.trim() || (type === "select" && !options.trim())}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        handleSave();
+                    }}
+                >
+                    {editingField ? "Save Edits" : "Add Field"}
+                </button>
+            </div>
+        </div>
+    );
 }
 
 export default function TaskEditorPage() {
@@ -176,15 +444,26 @@ export default function TaskEditorPage() {
         return embedUrl ? `https://scaffoldtool.vercel.app${embedUrl}` : "";
     }, [embedUrl]);
 
+    // Ref to prevent multiple simultaneous refreshes
+    const isRefreshingRef = useRef(false);
+
     useEffect(() => {
         if (!loading && !user) {
             router.push("/login");
-        } else if (user && appId && taskName) {
+        } else if (user && appId && taskName && !isRefreshingRef.current) {
+            // Prevent multiple simultaneous refreshes
+            isRefreshingRef.current = true;
+            
             // Only refresh data when user is authenticated
-            refreshApp();
-            refreshTask();
-            refreshTaskFields();
-            refreshTemplates();
+            Promise.all([
+                refreshApp(),
+                refreshTask(),
+                refreshTaskFields(),
+                refreshTemplates()
+            ]).finally(() => {
+                isRefreshingRef.current = false;
+            });
+            
             setTimeout(() => window.dispatchEvent(new CustomEvent('scaffold-editor-loaded')), 500);
 
             if (taskName.toLowerCase().includes("recipe")) {
@@ -210,64 +489,85 @@ export default function TaskEditorPage() {
     }, []);
 
     async function refreshApp() {
-        const res = await authenticatedFetch("/api/apps", { method: "GET" });
-        const data = await safeJson(res);
-        if (data?.success) {
-            const foundApp = (data.apps || []).find((a: AppRow) => a.id === appId);
-            setApp(foundApp || null);
-            // Share app name with navbar immediately
-            if (foundApp?.name) {
-                window.dispatchEvent(new CustomEvent('scaffold-app-name', { 
-                    detail: { appId, name: foundApp.name } 
-                }));
+        try {
+            const res = await authenticatedFetch("/api/apps", { method: "GET" });
+            const data = await safeJson(res);
+            if (data?.success) {
+                const foundApp = (data.apps || []).find((a: AppRow) => a.id === appId);
+                setApp(foundApp || null);
+                // Share app name with navbar immediately
+                if (foundApp?.name) {
+                    window.dispatchEvent(new CustomEvent('scaffold-app-name', { 
+                        detail: { appId, name: foundApp.name } 
+                    }));
+                }
             }
+        } catch (error) {
+            console.error("Error refreshing app:", error);
         }
     }
 
     async function refreshTask() {
         if (!appId) return;
-        const res = await authenticatedFetch(`/api/tasks?app_id=${encodeURIComponent(appId)}`);
-        const data = await safeJson(res);
-        if (data?.success) {
-            const foundTask = (data.tasks || []).find((t: TaskRow) => t.name === taskName);
-            if (foundTask) {
-                setTask(foundTask);
-                setTheme(foundTask.theme || "default");
-                setCustomColor(foundTask.custom_color || "#000000");
-                setFont(foundTask.font || "Inter");
-            } else {
-                setTask(null);
+        try {
+            const res = await authenticatedFetch(`/api/tasks?app_id=${encodeURIComponent(appId)}`);
+            const data = await safeJson(res);
+            if (data?.success) {
+                const foundTask = (data.tasks || []).find((t: TaskRow) => t.name === taskName);
+                if (foundTask) {
+                    setTask(foundTask);
+                    setTheme(foundTask.theme || "default");
+                    setCustomColor(foundTask.custom_color || "#000000");
+                    setFont(foundTask.font || "Inter");
+                } else {
+                    setTask(null);
+                }
             }
+        } catch (error) {
+            console.error("Error refreshing task:", error);
         }
     }
 
     async function refreshTaskFields() {
         if (!appId || !taskName) return;
-        const res = await authenticatedFetch(
-            `/api/task-fields?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(taskName)}`
-        );
-        const data = await safeJson(res);
-        if (data?.success) setTaskFields(data.fields || []);
+        console.log("[refreshTaskFields] Starting refresh...");
+        try {
+            const res = await authenticatedFetch(
+                `/api/task-fields?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(taskName)}`
+            );
+            const data = await safeJson(res);
+            console.log("[refreshTaskFields] Data received:", data?.success, "Fields count:", data?.fields?.length);
+            if (data?.success) {
+                setTaskFields(data.fields || []);
+                console.log("[refreshTaskFields] State updated with", data.fields?.length, "fields");
+            }
+        } catch (error) {
+            console.error("Error refreshing task fields:", error);
+        }
     }
 
 
 
     async function refreshTemplates() {
         if (!appId || !taskName) return;
-        const res = await authenticatedFetch(
-            `/api/prompt-templates?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(taskName)}`
-        );
-        const data = await safeJson(res);
-        if (data?.success) {
-            const rows: TemplateRow[] = data.templates || [];
-            setTemplates(rows);
-            if (rows.length && rows[0]?.template) {
-                setTemplate(rows[0].template);
-                setLastSavedTemplate(rows[0].template);
-            } else {
-                setTemplate("You are a [define here]");
-                setLastSavedTemplate("");
+        try {
+            const res = await authenticatedFetch(
+                `/api/prompt-templates?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(taskName)}`
+            );
+            const data = await safeJson(res);
+            if (data?.success) {
+                const rows: TemplateRow[] = data.templates || [];
+                setTemplates(rows);
+                if (rows.length && rows[0]?.template) {
+                    setTemplate(rows[0].template);
+                    setLastSavedTemplate(rows[0].template);
+                } else {
+                    setTemplate("You are a [define here]");
+                    setLastSavedTemplate("");
+                }
             }
+        } catch (error) {
+            console.error("Error refreshing templates:", error);
         }
     }
 
@@ -290,20 +590,35 @@ export default function TaskEditorPage() {
     }
 
     async function updateTaskField(fieldId: string, updates: Partial<FieldRow>) {
-        if (!appId || !taskName) return;
-        setStatus("");
-        const res = await authenticatedFetch("/api/task-fields", {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ id: fieldId, ...updates }),
-        });
-        const data = await safeJson(res);
-        if (!data?.success) {
-            setStatus(`❌ Update field failed: ${data?.error || "unknown error"}`);
+        console.log("updateTaskField called with:", fieldId, updates);
+        if (!appId || !taskName) {
+            console.log("Missing appId or taskName");
             return;
         }
-        setStatus("✅ Field updated");
-        await refreshTaskFields();
+        setStatus("");
+        console.log("About to call API...");
+        try {
+            const res = await authenticatedFetch("/api/task-fields", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: fieldId, ...updates }),
+            });
+            console.log("API response received:", res.status);
+            const data = await safeJson(res);
+            console.log("API data:", data);
+            if (!data?.success) {
+                setStatus(`❌ Update field failed: ${data?.error || "unknown error"}`);
+                console.log("Update failed:", data?.error);
+                return;
+            }
+            setStatus("✅ Field updated");
+            console.log("About to refresh fields...");
+            await refreshTaskFields();
+            console.log("Fields refreshed");
+        } catch (error) {
+            console.error("Error in updateTaskField:", error);
+            setStatus(`❌ Update failed: ${error}`);
+        }
     }
 
     async function deleteTaskField(fieldId: string) {
@@ -420,234 +735,9 @@ export default function TaskEditorPage() {
         }
     }
 
-    function FieldCreator({
-        kind,
-        onAdd,
-        nextOrder,
-        editingField,
-        onUpdate,
-        onCancelEdit,
-    }: {
-        kind: "global" | "task";
-        onAdd: (f: Partial<FieldRow>) => Promise<void>;
-        nextOrder: number;
-        editingField?: FieldRow | null;
-        onUpdate?: (fieldId: string, updates: Partial<FieldRow>) => Promise<void>;
-        onCancelEdit?: () => void;
-    }) {
-        const [label, setLabel] = useState(editingField?.field_label || "");
-        const [name, setName] = useState(editingField?.field_name || "");
-        const [type, setType] = useState<FieldType>(editingField?.field_type || "text");
-        const [required, setRequired] = useState(editingField?.required ?? true);
-        const [options, setOptions] = useState<string>(editingField?.options?.join("\n") || "");
-        const [hasMin, setHasMin] = useState(editingField?.min != null);
-        const [hasMax, setHasMax] = useState(editingField?.max != null);
-        const [minValue, setMinValue] = useState<string>(editingField?.min?.toString() || "0");
-        const [maxValue, setMaxValue] = useState<string>(editingField?.max?.toString() || "100");
-
-        useEffect(() => {
-            if (editingField) {
-                setLabel(editingField.field_label);
-                setName(editingField.field_name);
-                setType(editingField.field_type);
-                setRequired(editingField.required);
-                setOptions(editingField.options?.join("\n") || "");
-                setHasMin(editingField.min != null);
-                setHasMax(editingField.max != null);
-                setMinValue(editingField.min?.toString() || "0");
-                setMaxValue(editingField.max?.toString() || "100");
-            }
-        }, [editingField]);
-
-        const handleSave = async () => {
-            if (editingField && onUpdate) {
-                const updates: Partial<FieldRow> = {
-                    field_label: label.trim(),
-                    field_name: slugifyFieldName(name || label),
-                    field_type: type,
-                    required,
-                };
-                if (type === "number") {
-                    updates.min = hasMin ? parseFloat(minValue) : null;
-                    updates.max = hasMax ? parseFloat(maxValue) : null;
-                }
-                if (type === "select") {
-                    updates.options = options.split("\n").map(o => o.trim()).filter(Boolean);
-                }
-                await onUpdate(editingField.id, updates);
-                if (onCancelEdit) onCancelEdit();
-            } else {
-                const fieldData: Partial<FieldRow> = {
-                    field_label: label.trim(),
-                    field_name: slugifyFieldName(name || label),
-                    field_type: type,
-                    required,
-                    order: nextOrder,
-                    options: null,
-                    default_value: null,
-                };
-                if (type === "number") {
-                    fieldData.min = hasMin ? parseFloat(minValue) : null;
-                    fieldData.max = hasMax ? parseFloat(maxValue) : null;
-                }
-                if (type === "select") {
-                    fieldData.options = options.split("\n").map(o => o.trim()).filter(Boolean);
-                }
-                await onAdd(fieldData);
-            }
-        };
-
-        return (
-            <div data-tour="add-field" className="rounded-2xl border border-gray-200 bg-gray-50/50 p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                    <div className="font-bold text-lg text-gray-900">
-                        {editingField ? "Edit Field" : "Add New Field"}
-                    </div>
-                    {editingField && onCancelEdit && (
-                        <button
-                            onClick={onCancelEdit}
-                            className="text-sm text-gray-500 hover:text-black font-semibold"
-                        >
-                            Cancel
-                        </button>
-                    )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">
-                            Label
-                            <span className="block text-[10px] normal-case font-medium text-gray-400 mt-0.5">this will be in the question field on the form</span>
-                        </label>
-                        <input
-                            className="w-full rounded-xl border border-gray-300 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-black"
-                            value={label}
-                            onChange={(e) => {
-                                setLabel(e.target.value);
-                                if (!name && !editingField) setName(slugifyFieldName(e.target.value));
-                            }}
-                            placeholder="e.g. Your Name"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Field Name (API)</label>
-                        <input
-                            className="w-full rounded-xl border border-gray-300 px-4 py-2.5 bg-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-black"
-                            value={name}
-                            onChange={(e) => setName(slugifyFieldName(e.target.value))}
-                            placeholder="e.g. user_name"
-                            disabled={!!editingField}
-                        />
-                    </div>
-
-                    <div>
-                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Type</label>
-                        <select
-                            className="w-full rounded-xl border border-gray-300 px-4 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-black"
-                            value={type}
-                            onChange={(e) => setType(e.target.value as FieldType)}
-                        >
-                            <option value="text">Short Text</option>
-                            <option value="textarea">Long Text (Textarea)</option>
-                            <option value="number">Number</option>
-                            <option value="select">Dropdown (Select)</option>
-                        </select>
-                    </div>
-
-                    <div className="flex items-end pb-2">
-                        <label className="flex items-center gap-3 cursor-pointer group">
-                            <div className="relative">
-                                <input
-                                    type="checkbox"
-                                    className="sr-only peer"
-                                    checked={required}
-                                    onChange={(e) => setRequired(e.target.checked)}
-                                />
-                                <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
-                            </div>
-                            <span className="text-sm font-semibold text-gray-700 group-hover:text-black transition-colors">Required Field</span>
-                        </label>
-                    </div>
-                </div>
-
-                {/* Number Field Min/Max */}
-                {type === "number" && (
-                    <div className="mt-4 p-4 bg-blue-50/50 rounded-xl border border-blue-100">
-                        <div className="text-xs font-bold text-gray-700 mb-3 uppercase tracking-wider">Number Constraints</div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="flex items-center gap-3 cursor-pointer group mb-2">
-                                    <input
-                                        type="checkbox"
-                                        checked={hasMin}
-                                        onChange={(e) => setHasMin(e.target.checked)}
-                                        className="w-4 h-4"
-                                    />
-                                    <span className="text-sm font-semibold text-gray-700">Set Minimum</span>
-                                </label>
-                                {hasMin && (
-                                    <input
-                                        type="number"
-                                        value={minValue}
-                                        onChange={(e) => setMinValue(e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-sm"
-                                        placeholder="Min value"
-                                    />
-                                )}
-                            </div>
-                            <div>
-                                <label className="flex items-center gap-3 cursor-pointer group mb-2">
-                                    <input
-                                        type="checkbox"
-                                        checked={hasMax}
-                                        onChange={(e) => setHasMax(e.target.checked)}
-                                        className="w-4 h-4"
-                                    />
-                                    <span className="text-sm font-semibold text-gray-700">Set Maximum</span>
-                                </label>
-                                {hasMax && (
-                                    <input
-                                        type="number"
-                                        value={maxValue}
-                                        onChange={(e) => setMaxValue(e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-sm"
-                                        placeholder="Max value"
-                                    />
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Dropdown Options */}
-                {type === "select" && (
-                    <div className="mt-4 p-4 bg-purple-50/50 rounded-xl border border-purple-100">
-                        <label className="text-xs font-bold text-gray-700 mb-2 block uppercase tracking-wider">Dropdown Options (one per line)</label>
-                        <textarea
-                            value={options}
-                            onChange={(e) => setOptions(e.target.value)}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-sm font-mono min-h-[120px]"
-                            placeholder={"option 1\noption 2\noption 3"}
-                        />
-                        <div className="text-xs text-gray-500 mt-2">Each line will become one option in the dropdown</div>
-                    </div>
-                )}
-
-                <div className="mt-8 flex items-center gap-3">
-                    <button
-                        className="w-full md:w-auto rounded-xl bg-scaffold-brand px-8 py-3 text-black font-graffiti text-lg hover:bg-scaffold-brandHover transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
-                        disabled={!label.trim() || (type === "select" && !options.trim())}
-                        onClick={handleSave}
-                    >
-                        {editingField ? "Save Edits" : "Add Field"}
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    const nextTaskOrder = (taskFields?.reduce((m, f) => Math.max(m, f.order || 0), 0) || 0) + 1;
+    const nextTaskOrder = useMemo(() => {
+        return (taskFields?.reduce((m, f) => Math.max(m, f.order || 0), 0) || 0) + 1;
+    }, [taskFields]);
 
     if (loading) {
         return (
@@ -831,6 +921,7 @@ export default function TaskEditorPage() {
                     <section ref={fieldSectionRef} data-section="fields" id="fields-section" className="min-h-screen snap-start flex flex-col py-8">
                         <div className="space-y-6" data-tour="fields-section">
                             <FieldCreator 
+                                key="field-creator-stable"
                                 kind="task" 
                                 onAdd={addTaskField} 
                                 nextOrder={nextTaskOrder} 

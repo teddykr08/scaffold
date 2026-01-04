@@ -6,6 +6,12 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 
+// Create a single shared Supabase client instance
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+);
+
 export default function Navbar() {
   const { user, signOut } = useAuth();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -50,10 +56,6 @@ export default function Navbar() {
       if (!cached && user) {
         const fetchAppName = async () => {
           try {
-            const supabase = createClient(
-              process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-              process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-            );
             const { data: { session } } = await supabase.auth.getSession();
             
             if (!session?.access_token) {
