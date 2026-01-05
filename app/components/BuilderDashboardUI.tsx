@@ -84,7 +84,9 @@ export default function BuilderDashboardUI({
                             key={app.id}
                             data-tour="project-card"
                             className="group rounded-[2.5rem] border border-gray-100 p-10 hover:border-black hover:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] transition-all duration-500 cursor-pointer flex flex-col justify-between bg-white relative overflow-hidden"
-                            onClick={() => onAppClick(app.id)}
+                            onClick={() => {
+                                window.location.href = `/builder/${app.id}`;
+                            }}
                         >
                             <div className="absolute top-0 left-0 w-full h-2 bg-gray-50 group-hover:bg-scaffold-brand transition-colors duration-500"></div>
 

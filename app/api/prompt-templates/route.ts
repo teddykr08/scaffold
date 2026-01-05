@@ -76,6 +76,23 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        // Validate template and generate warnings
+        const warnings = [];
+        
+        if (!template.includes('{{')) {
+            warnings.push('Template has no variables - AI won\'t use any form inputs');
+        }
+        
+        // Check for potentially harmful patterns
+        const harmfulPatterns = ['ignore previous', 'disregard', 'system:', 'assistant:'];
+        const hasHarmful = harmfulPatterns.some(pattern => 
+            template.toLowerCase().includes(pattern)
+        );
+        
+        if (hasHarmful) {
+            warnings.push('Template contains patterns that might cause unexpected AI behavior');
+        }
+
         const authHeader = req.headers.get("authorization");
         if (!authHeader) {
             return NextResponse.json(
@@ -119,7 +136,7 @@ export async function POST(req: NextRequest) {
                 );
             }
 
-            return NextResponse.json({ success: true, template: data });
+            return NextResponse.json({ success: true, template: data, warnings });
         } else {
             // INSERT new template
             const { data, error } = await supabaseServer
@@ -135,7 +152,7 @@ export async function POST(req: NextRequest) {
                 );
             }
 
-            return NextResponse.json({ success: true, template: data });
+            return NextResponse.json({ success: true, template: data, warnings });
         }
     } catch (error) {
         console.error("[prompt-templates] POST error:", error);

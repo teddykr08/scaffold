@@ -1,113 +1,222 @@
 import Link from "next/link";
 
+const useCases = [
+  { icon: '🍕', title: 'Restaurant Menu Bot', desc: 'Answers "What\'s vegan?" using your menu' },
+  { icon: '✍️', title: 'Blog Title Generator', desc: 'Creates 10 title ideas from a topic' },
+  { icon: '📧', title: 'Email Writer', desc: 'Drafts professional emails fast' },
+  { icon: '🎓', title: 'Study Tutor', desc: 'Explains concepts from your course material' },
+  { icon: '🛍️', title: 'Product Description Generator', desc: 'E-commerce product copy writer' },
+  { icon: '💬', title: 'Customer Support Tickets', desc: 'Templates for common support issues' },
+  { icon: '💻', title: 'Code Snippet Generator', desc: 'Creates code from requirements' },
+  { icon: '❓', title: 'FAQ Bot', desc: 'Answers questions using your docs' },
+];
+
 export default function Page() {
   return (
     <main className="min-h-screen">
-      {/* Hero */}
-      <section className="text-center py-28 px-6 border-b relative overflow-hidden">
-        <div className="flex justify-center mb-6">
-          <span className="font-graffiti text-7xl sm:text-8xl text-black">scaffold</span>
-        </div>
-
-        <p className="text-xl max-w-2xl mx-auto mb-10 text-gray-700 leading-relaxed tracking-wider font-medium">
-          Add AI to your app without API keys or complex setup—build intelligent forms and chatbots in minutes
+      {/* SECTION 1: Hero */}
+      <section className="text-center py-20 px-6 border-b">
+        <h1 className="text-5xl md:text-6xl font-bold mb-6 max-w-4xl mx-auto">
+          Add AI Features to Your Site. No Code, No API Keys.
+        </h1>
+        <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+          Build custom AI tools and chatbots, then embed them anywhere. Free forever.
         </p>
-
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-6 relative z-10">
+        <div className="flex flex-col sm:flex-row justify-center gap-4">
           <Link
             href="/login?mode=signup"
-            className="w-full sm:w-auto px-8 py-4 bg-scaffold-brand text-black rounded-xl font-graffiti text-lg hover:bg-scaffold-brandHover transition-all shadow-lg hover:shadow-xl text-center"
+            className="px-8 py-4 bg-scaffold-brand text-black rounded-xl font-bold text-lg hover:bg-scaffold-brandHover transition-all shadow-lg"
           >
             Get Started (FREE)
           </Link>
-
           <Link
             href="/demo"
-            className="w-full sm:w-auto px-8 py-4 border border-gray-200 rounded-xl font-bold bg-white/50 backdrop-blur-sm hover:bg-white transition-all text-center"
+            className="px-8 py-4 border-2 border-gray-300 rounded-xl font-bold hover:bg-gray-50 transition-all"
           >
-            Try Demo
-          </Link>
-
-          <Link
-            href="/how-it-works"
-            className="w-full sm:w-auto px-8 py-4 border border-gray-200 rounded-xl font-bold hover:bg-gray-50 transition-all text-center"
-          >
-            How it works
-          </Link>
-
-          <Link
-            href="/pricing"
-            className="text-sm font-semibold text-gray-500 hover:text-black transition-colors"
-          >
-            PRO (Coming Soon)
+            See Demos
           </Link>
         </div>
       </section>
 
-      {/* Features with Background Image */}
-      <section className="relative py-24 px-6 overflow-hidden">
-        {/* Background Image with Blur */}
-        <div
-          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat blur-[2px] opacity-30 scale-110"
-          style={{ backgroundImage: 'url("/scaffold-bg.jpg")' }}
-        />
-        {/* Overlay to ensure readability */}
-        <div className="absolute inset-0 z-0 bg-white/20" />
-
-        <div className="max-w-6xl mx-auto relative z-10">
-          <div className="bg-white/70 backdrop-blur-xl rounded-[4rem] p-12 md:p-20 shadow-2xl border border-white/40">
-            <h2 className="font-graffiti text-5xl text-center mb-16 tracking-tight text-black">
-              Simple. Powerful. Free.
-            </h2>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="p-10 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 shadow-sm transition-all hover:shadow-lg hover:-translate-y-1">
-                <div className="w-12 h-12 bg-scaffold-brand rounded-2xl flex items-center justify-center mb-6 text-black shadow-lg">
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
-                </div>
-                <h3 className="font-bold text-2xl mb-3 text-black">No API Keys</h3>
-                <p className="text-black leading-relaxed font-medium">
-                  Users run prompts through their own ChatGPT sessions. No overhead or token costs for you.
-                </p>
-              </div>
-
-              <div className="p-10 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 shadow-sm transition-all hover:shadow-lg hover:-translate-y-1">
-                <div className="w-12 h-12 bg-scaffold-brand rounded-2xl flex items-center justify-center mb-6 text-black shadow-lg">
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                </div>
-                <h3 className="font-bold text-2xl mb-3 text-black">Easy Setup</h3>
-                <p className="text-black leading-relaxed font-medium">
-                  Copy-paste a single iframe. Works with React, Vue, Webflow, or plain HTML.
-                </p>
-              </div>
-
-              <div className="p-10 bg-white/60 backdrop-blur-sm rounded-3xl border border-white/50 shadow-sm transition-all hover:shadow-lg hover:-translate-y-1">
-                <div className="w-12 h-12 bg-scaffold-brand rounded-2xl flex items-center justify-center mb-6 text-black shadow-lg">
-                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
-                </div>
-                <h3 className="font-bold text-2xl mb-3 text-black">Custom Logic</h3>
-                <p className="text-black leading-relaxed font-medium">
-                  Define variables, fields, and complex prompt templates in our intuitive builder.
-                </p>
-              </div>
-            </div>
+      {/* SECTION 2: Who This Is For */}
+      <section className="py-20 px-6 bg-gray-50">
+        <h2 className="text-4xl font-bold text-center mb-12">Who Uses Scaffold?</h2>
+        <div className="max-w-7xl mx-auto grid md:grid-cols-3 gap-8">
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+            <h3 className="text-2xl font-bold mb-4">🛠️ Hobbyists & Indie Devs</h3>
+            <p className="text-gray-700 mb-4">
+              Building side projects without API costs. Prototype AI features fast.
+            </p>
+            <ul className="space-y-2 text-gray-600">
+              <li>• Side projects with $0 budget</li>
+              <li>• Portfolio projects</li>
+              <li>• Learning AI integration</li>
+            </ul>
+          </div>
+          
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+            <h3 className="text-2xl font-bold mb-4">🏪 Small Businesses</h3>
+            <p className="text-gray-700 mb-4">
+              Add AI tools to your site without hiring developers. Restaurants, tutors, agencies.
+            </p>
+            <ul className="space-y-2 text-gray-600">
+              <li>• Restaurant menu chatbots</li>
+              <li>• FAQ automation</li>
+              <li>• Customer support helpers</li>
+            </ul>
+          </div>
+          
+          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
+            <h3 className="text-2xl font-bold mb-4">🚀 Validating Ideas</h3>
+            <p className="text-gray-700 mb-4">
+              Test if AI features work for your users before paying for API access.
+            </p>
+            <ul className="space-y-2 text-gray-600">
+              <li>• MVP prototypes</li>
+              <li>• User testing</li>
+              <li>• Proof of concept</li>
+            </ul>
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="text-center py-32 border-t bg-gray-50/50">
-        <h2 className="font-graffiti text-5xl mb-8 tracking-tight text-black">
-          Ready to supercharge your app?
-        </h2>
+      {/* SECTION 3: Two Demo Types */}
+      <section className="py-20 px-6">
+        <h2 className="text-4xl font-bold text-center mb-12">Two Ways to Use Scaffold</h2>
+        
+        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12">
+          <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
+            <h3 className="text-2xl font-bold mb-4">AI Tools (Quick Generators)</h3>
+            <p className="text-gray-700 mb-6">
+              One input → One AI output. Perfect for content creation.
+            </p>
+            <div className="bg-gray-100 rounded-lg p-6 mb-4 h-64 flex items-center justify-center">
+              <p className="text-gray-500 text-center">
+                📝 Demo: Blog Title Generator<br/>
+                <span className="text-sm">(Will be replaced with actual embed)</span>
+              </p>
+            </div>
+            <p className="text-sm text-gray-600">
+              <strong>Use for:</strong> Blog titles, emails, descriptions, code snippets
+            </p>
+          </div>
+          
+          <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
+            <h3 className="text-2xl font-bold mb-4">Smart Agents (Contextual Chatbots)</h3>
+            <p className="text-gray-700 mb-6">
+              AI with your specific knowledge. Answers questions about YOUR stuff.
+            </p>
+            <div className="bg-gray-100 rounded-lg p-6 mb-4 h-64 flex items-center justify-center">
+              <p className="text-gray-500 text-center">
+                🍕 Demo: Restaurant Menu Bot<br/>
+                <span className="text-sm">(Will be replaced with actual embed)</span>
+              </p>
+            </div>
+            <p className="text-sm text-gray-600">
+              <strong>Use for:</strong> Menu bots, FAQ bots, tutors, product finders
+            </p>
+          </div>
+        </div>
+      </section>
 
+      {/* SECTION 4: Use Case Grid */}
+      <section className="py-20 px-6 bg-gray-50">
+        <h2 className="text-4xl font-bold text-center mb-12">What You Can Build</h2>
+        <div className="max-w-7xl mx-auto grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {useCases.map((useCase, index) => (
+            <div key={index} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+              <span className="text-4xl mb-3 block">{useCase.icon}</span>
+              <h4 className="font-bold text-lg mb-2">{useCase.title}</h4>
+              <p className="text-gray-600 text-sm">{useCase.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* SECTION 5: How Is This Free? */}
+      <section className="py-20 px-6">
+        <h2 className="text-4xl font-bold text-center mb-12">How Is This Actually Free?</h2>
+        <div className="max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-4 gap-6 mb-12">
+            <div className="text-center">
+              <span className="inline-block w-12 h-12 bg-scaffold-brand rounded-full flex items-center justify-center font-bold text-xl mb-4">1</span>
+              <p className="text-gray-700">You build a form with fields (topic, tone, etc.)</p>
+            </div>
+            <div className="text-center">
+              <span className="inline-block w-12 h-12 bg-scaffold-brand rounded-full flex items-center justify-center font-bold text-xl mb-4">2</span>
+              <p className="text-gray-700">You write a prompt template using those fields</p>
+            </div>
+            <div className="text-center">
+              <span className="inline-block w-12 h-12 bg-scaffold-brand rounded-full flex items-center justify-center font-bold text-xl mb-4">3</span>
+              <p className="text-gray-700">Scaffold generates an optimized ChatGPT prompt</p>
+            </div>
+            <div className="text-center">
+              <span className="inline-block w-12 h-12 bg-scaffold-brand rounded-full flex items-center justify-center font-bold text-xl mb-4">4</span>
+              <p className="text-gray-700">User sends it to ChatGPT (they control the AI interaction)</p>
+            </div>
+          </div>
+          
+          <div className="bg-green-50 border-2 border-green-200 rounded-xl p-8 text-center">
+            <p className="text-lg font-bold mb-4">
+              <strong>We don&apos;t call OpenAI&apos;s API</strong> → We don&apos;t pay per request → You don&apos;t pay per request
+            </p>
+            <p className="text-green-800 font-bold text-xl">
+              ✅ Free tier (3 apps, 5 tasks each) stays free forever. No credit card required.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 6: When NOT to Use Scaffold */}
+      <section className="py-20 px-6 bg-red-50">
+        <h2 className="text-4xl font-bold text-center mb-8">When Scaffold Isn&apos;t Right</h2>
+        <p className="text-center text-gray-700 mb-12 max-w-2xl mx-auto">
+          We&apos;re honest about our limitations:
+        </p>
+        <div className="max-w-4xl mx-auto space-y-6">
+          <div className="bg-white p-6 rounded-xl border-l-4 border-red-500">
+            <p className="text-gray-800">
+              <span className="text-2xl mr-3">❌</span>
+              <strong>Need responses embedded in your site?</strong> Use OpenAI API directly.
+            </p>
+          </div>
+          <div className="bg-white p-6 rounded-xl border-l-4 border-red-500">
+            <p className="text-gray-800">
+              <span className="text-2xl mr-3">❌</span>
+              <strong>Building a production app for a business with revenue?</strong> Pay for proper API access.
+            </p>
+          </div>
+          <div className="bg-white p-6 rounded-xl border-l-4 border-red-500">
+            <p className="text-gray-800">
+              <span className="text-2xl mr-3">❌</span>
+              <strong>Need conversation history/memory?</strong> Scaffold is stateless - each submission is independent.
+            </p>
+          </div>
+          <div className="bg-white p-6 rounded-xl border-l-4 border-red-500">
+            <p className="text-gray-800">
+              <span className="text-2xl mr-3">❌</span>
+              <strong>High-volume production traffic?</strong> API gives you more control and better UX.
+            </p>
+          </div>
+        </div>
+        <p className="text-center text-gray-700 mt-8 max-w-3xl mx-auto italic">
+          <strong>The tradeoff:</strong> Redirecting to ChatGPT isn&apos;t ideal, but it&apos;s free. For prototypes and side projects, that&apos;s often worth it.
+        </p>
+      </section>
+
+      {/* SECTION 7: Final CTA */}
+      <section className="text-center py-20 px-6 bg-gradient-to-b from-white to-gray-50">
+        <h2 className="text-5xl font-bold mb-6">Ready to Build?</h2>
+        <p className="text-xl text-gray-600 mb-8">
+          Free forever. No credit card. 5 minute setup.
+        </p>
         <Link
           href="/login?mode=signup"
-          className="px-10 py-5 bg-scaffold-brand text-black rounded-2xl font-graffiti text-xl hover:bg-scaffold-brandHover transition-all shadow-2xl hover:shadow-scaffold-brand/20"
+          className="inline-block px-12 py-5 bg-scaffold-brand text-black rounded-xl font-bold text-xl hover:bg-scaffold-brandHover transition-all shadow-2xl"
         >
-          Start Building
+          Get Started
         </Link>
-        <p className="mt-6 text-gray-500 font-medium italic">Setup takes less than 2 minutes.</p>
+        <p className="mt-6 text-gray-500">3 apps included. Always free.</p>
       </section>
     </main>
   );

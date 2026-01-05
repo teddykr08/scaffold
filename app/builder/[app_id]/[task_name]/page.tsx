@@ -218,6 +218,17 @@ function FieldCreator({
                 fieldData.options = options.split("\n").map(o => o.trim()).filter(Boolean);
             }
             await onAdd(fieldData);
+            
+            // Reset form after successful add
+            setLabel("");
+            setName("");
+            setType("text");
+            setRequired(true);
+            setOptions("");
+            setHasMin(false);
+            setHasMax(false);
+            setMinValue("0");
+            setMaxValue("100");
         }
     };
 
@@ -401,6 +412,7 @@ export default function TaskEditorPage() {
     const [previewKey, setPreviewKey] = useState(0); // Force iframe reload
     const [isImproverOpen, setIsImproverOpen] = useState(false);
     const [editingField, setEditingField] = useState<FieldRow | null>(null);
+    const [dataLoading, setDataLoading] = useState(true);
 
     // Section refs for tutorial scroll
     const embedSectionRef = useRef<HTMLDivElement>(null);
@@ -447,28 +459,35 @@ export default function TaskEditorPage() {
     useEffect(() => {
         if (!loading && !user) {
             router.push("/login");
-        } else if (user && appId && taskName && !isRefreshingRef.current) {
-            // Prevent multiple simultaneous refreshes
+            return;
+        }
+        
+        // Start loading data immediately when we have user, appId, and taskName
+        if (user && appId && taskName && !isRefreshingRef.current) {
+            console.log('[TaskBuilder] User, appId, and taskName found, fetching data...');
             isRefreshingRef.current = true;
+            setDataLoading(true);
             
-            // Only refresh data when user is authenticated
+            // Parallel data fetch for faster loading
             Promise.all([
                 refreshApp(),
                 refreshTask(),
                 refreshTaskFields(),
                 refreshTemplates()
-            ]).finally(() => {
+            ]).then(() => {
+                console.log('[TaskBuilder] All data loaded');
+                window.dispatchEvent(new CustomEvent('scaffold-editor-loaded'));
+            }).finally(() => {
                 isRefreshingRef.current = false;
+                setDataLoading(false);
             });
-            
-            setTimeout(() => window.dispatchEvent(new CustomEvent('scaffold-editor-loaded')), 500);
 
             if (taskName.toLowerCase().includes("recipe")) {
                 setUseFixedPrompt(true);
             }
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user, loading, router, appId, taskName]);
+    }, [user, loading, appId, taskName]);
 
     // Listen for template improved event
     useEffect(() => {
@@ -571,6 +590,25 @@ export default function TaskEditorPage() {
     async function addTaskField(f: Partial<FieldRow>) {
         if (!appId || !taskName) return;
         setStatus("");
+        
+        // Optimistic update - add field immediately
+        const tempField: FieldRow = {
+            id: 'temp-' + Date.now(),
+            app_id: appId,
+            task_name: taskName,
+            field_name: f.field_name || '',
+            field_label: f.field_label || '',
+            field_type: f.field_type || 'text',
+            required: f.required ?? true,
+            order: f.order || taskFields.length,
+            created_at: new Date().toISOString(),
+            options: f.options || null,
+            default_value: f.default_value || null,
+            min: f.min,
+            max: f.max
+        };
+        setTaskFields(prevFields => [...prevFields, tempField]);
+        
         const res = await authenticatedFetch("/api/task-fields", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -579,6 +617,8 @@ export default function TaskEditorPage() {
         const data = await safeJson(res);
         if (!data?.success) {
             setStatus(`❌ Add task field failed: ${data?.error || "unknown error"}`);
+            // Revert optimistic update
+            setTaskFields(prevFields => prevFields.filter(field => field.id !== tempField.id));
             return;
         }
         setStatus("✅ Task field added");
@@ -593,6 +633,14 @@ export default function TaskEditorPage() {
             return;
         }
         setStatus("");
+        
+        // Optimistic update - apply changes immediately
+        setTaskFields(prevFields => 
+            prevFields.map(field => 
+                field.id === fieldId ? { ...field, ...updates } : field
+            )
+        );
+        
         console.log("About to call API...");
         try {
             const res = await authenticatedFetch("/api/task-fields", {
@@ -606,6 +654,8 @@ export default function TaskEditorPage() {
             if (!data?.success) {
                 setStatus(`❌ Update field failed: ${data?.error || "unknown error"}`);
                 console.log("Update failed:", data?.error);
+                // Revert optimistic update
+                await refreshTaskFields();
                 return;
             }
             setStatus("✅ Field updated");
@@ -615,6 +665,8 @@ export default function TaskEditorPage() {
         } catch (error) {
             console.error("Error in updateTaskField:", error);
             setStatus(`❌ Update failed: ${error}`);
+            // Revert optimistic update
+            await refreshTaskFields();
         }
     }
 
@@ -623,6 +675,11 @@ export default function TaskEditorPage() {
         if (!confirm("Are you sure you want to delete this task field?")) return;
 
         setStatus("");
+        
+        // Optimistic update - remove immediately
+        const deletedField = taskFields.find(f => f.id === fieldId);
+        setTaskFields(prevFields => prevFields.filter(field => field.id !== fieldId));
+        
         const res = await authenticatedFetch(`/api/task-fields?id=${fieldId}`, {
             method: "DELETE",
         });
@@ -630,6 +687,10 @@ export default function TaskEditorPage() {
 
         if (!data?.success) {
             setStatus(`❌ Delete task field failed: ${data?.error || "unknown error"}`);
+            // Revert optimistic update
+            if (deletedField) {
+                setTaskFields(prevFields => [...prevFields, deletedField].sort((a, b) => a.order - b.order));
+            }
             return;
         }
 

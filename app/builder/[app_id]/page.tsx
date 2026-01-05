@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
@@ -100,6 +100,8 @@ export default function AppDetailPage() {
     const [newTaskName, setNewTaskName] = useState("");
     const [status, setStatus] = useState<string>("");
     const [fieldCounts, setFieldCounts] = useState<Record<string, number>>({});
+    const [dataLoading, setDataLoading] = useState(true);
+    const isFetchingRef = useRef(false);
 
     const [showNewTaskModal, setShowNewTaskModal] = useState(false);
     
@@ -111,13 +113,19 @@ export default function AppDetailPage() {
     useEffect(() => {
         if (!loading && !user) {
             router.push("/login");
+            return;
         }
-    }, [user, loading, router]);
-
-    useEffect(() => {
-        if (user && appId) {
-            refreshApp();
-            refreshTasks();
+        
+        // Prevent duplicate fetches
+        if (user && appId && !isFetchingRef.current) {
+            console.log('[ProjectPage] User and appId found, fetching data...');
+            isFetchingRef.current = true;
+            setDataLoading(true);
+            Promise.all([refreshApp(), refreshTasks()]).finally(() => {
+                console.log('[ProjectPage] Data fetch complete');
+                setDataLoading(false);
+                isFetchingRef.current = false;
+            });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user, appId]);
@@ -133,22 +141,29 @@ export default function AppDetailPage() {
 
     async function refreshTasks() {
         if (!appId) return;
+        console.log('[ProjectPage] refreshTasks called for appId:', appId);
         const res = await authenticatedFetch(`/api/tasks?app_id=${encodeURIComponent(appId)}`);
         const data = await safeJson(res);
+        console.log('[ProjectPage] Tasks data received:', data);
         if (data?.success) {
+            // Immediately set tasks for instant UI update
+            console.log('[ProjectPage] Setting', data.tasks?.length, 'tasks');
             setTasks(data.tasks || []);
 
+            // Fetch field counts in parallel
             const counts: Record<string, number> = {};
-            for (const task of data.tasks || []) {
-                // Correctly fetch fields for this task
-                const fieldsRes = await fetch(
-                    `/api/task-fields?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(task.name)}`
-                );
-                const fieldsData = await safeJson(fieldsRes);
-                counts[task.name] = ((fieldsData?.fields || []).filter((f: FieldRow) => f.field_type !== "runtime")).length;
-            }
+            await Promise.all(
+                (data.tasks || []).map(async (task: TaskRow) => {
+                    const fieldsRes = await fetch(
+                        `/api/task-fields?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(task.name)}`
+                    );
+                    const fieldsData = await safeJson(fieldsRes);
+                    counts[task.name] = ((fieldsData?.fields || []).filter((f: FieldRow) => f.field_type !== "runtime")).length;
+                })
+            );
             setFieldCounts(counts);
-            setTimeout(() => window.dispatchEvent(new CustomEvent('scaffold-tasks-loaded')), 100);
+            console.log('[ProjectPage] Field counts set:', counts);
+            window.dispatchEvent(new CustomEvent('scaffold-tasks-loaded'));
         }
     }
 
@@ -167,23 +182,38 @@ export default function AppDetailPage() {
         }
 
         try {
+            const slugified = slugifyFieldName(name);
+            
+            // Optimistic update - add immediately
+            const tempTask: TaskRow = {
+                id: 'temp-' + Date.now(),
+                name: slugified,
+                description: null,
+                created_at: new Date().toISOString()
+            };
+            setTasks(prevTasks => [...prevTasks, tempTask]);
+            setFieldCounts(prev => ({ ...prev, [slugified]: 0 }));
+            setNewTaskName("");
+            setShowNewTaskModal(false);
+            
             const res = await authenticatedFetch("/api/tasks", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     app_id: appId,
-                    name: slugifyFieldName(name),
+                    name: slugified,
                 }),
             });
             const data = await safeJson(res);
             if (!data?.success) {
                 setStatus(`❌ Create task failed: ${data?.error || "unknown error"}`);
+                // Revert optimistic update
+                setTasks(prevTasks => prevTasks.filter(t => t.id !== tempTask.id));
                 return;
             }
             setStatus("✅ Task created");
-            setNewTaskName("");
-            setShowNewTaskModal(false);
             window.dispatchEvent(new CustomEvent('scaffold-task-created'));
+            // Refresh to get the real data
             await refreshTasks();
         } catch (error) {
             console.error('Error creating task:', error);
@@ -195,6 +225,14 @@ export default function AppDetailPage() {
         if (!newName.trim()) return;
         setStatus("");
         const slugified = slugifyFieldName(newName);
+        
+        // Optimistic update
+        setTasks(prevTasks => 
+            prevTasks.map(task => 
+                task.id === taskId ? { ...task, name: slugified } : task
+            )
+        );
+        
         const res = await authenticatedFetch(`/api/tasks`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -203,6 +241,8 @@ export default function AppDetailPage() {
         const data = await safeJson(res);
         if (!data?.success) {
             setStatus(`❌ Rename task failed: ${data?.error || "unknown error"}`);
+            // Revert optimistic update
+            await refreshTasks();
             return;
         }
         setStatus("✅ Task renamed successfully");
@@ -244,13 +284,13 @@ export default function AppDetailPage() {
             <div className="max-w-6xl mx-auto px-6 py-10">
                 {/* Header with back button */}
                 <div className="mb-8">
-                    <Link
-                        href="/builder"
+                    <button
+                        onClick={() => window.location.href = '/builder'}
                         className="text-sm text-gray-500 hover:text-black mb-4 inline-flex items-center gap-1 transition-colors font-medium"
                     >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path></svg>
                         Back to Projects
-                    </Link>
+                    </button>
                     <div className="flex justify-between items-end">
                         <div>
                             <h1 className="font-graffiti text-5xl tracking-tight text-black">{app?.name || "Project"}</h1>
@@ -277,8 +317,7 @@ export default function AppDetailPage() {
                         <div
                             key={task.id}
                             data-tour="task-card"
-                            className="group rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow cursor-pointer flex flex-col justify-between relative"
-                            onClick={() => router.push(`/builder/${appId}/${task.name}`)}
+                            className="group rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow flex flex-col justify-between relative"
                         >
                             <div className="absolute top-4 right-4">
                                 <ActionMenu
@@ -307,9 +346,8 @@ export default function AppDetailPage() {
                             </div>
                             <button
                                 className="mt-6 w-full rounded-lg bg-scaffold-brand text-black py-2.5 font-graffiti hover:bg-scaffold-brandHover transition-colors"
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    router.push(`/builder/${appId}/${task.name}`);
+                                onClick={() => {
+                                    window.location.href = `/builder/${appId}/${task.name}`;
                                 }}
                             >
                                 Edit Task

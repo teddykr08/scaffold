@@ -1,9 +1,23 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServer } from "@/lib/supabaseServer";
+import { ratelimit, getRateLimitKey } from '@/lib/ratelimit';
+
+// Sanitize template input to prevent prompt injection
+const sanitizeTemplateInput = (input: string): string => {
+  // Escape double curly braces to prevent template injection
+  return input
+    .replace(/\{\{/g, '\\{\\{')
+    .replace(/\}\}/g, '\\}\\}');
+};
 
 export async function POST(req: NextRequest) {
   try {
+    // Get IP address for rate limiting
+    const ip = req.headers.get('x-forwarded-for') || 
+               req.headers.get('x-real-ip') || 
+               'unknown';
+    
     const body = await req.json();
     const { app_id, task_name, task_values = {}, field_values = {}, runtime_context = {}, fixed_content } = body;
 
@@ -11,6 +25,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: "app_id and task_name are required" },
         { status: 400 }
+      );
+    }
+
+    // Rate limit by IP + app_id
+    const identifier = `${ip}:${app_id}`;
+    
+    const { success: rateLimitSuccess, limit, remaining, reset } = await ratelimit.limit(
+      getRateLimitKey(identifier, 'generate-prompt')
+    );
+    
+    if (!rateLimitSuccess) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Rate limit exceeded. Please try again in a few minutes.' 
+        },
+        { 
+          status: 429,
+          headers: {
+            'X-RateLimit-Limit': limit.toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': reset.toString(),
+          }
+        }
       );
     }
 
@@ -66,11 +104,17 @@ export async function POST(req: NextRequest) {
     // Combine all values
     const allValues = { ...task_values, ...field_values, ...runtime_context };
 
-    // Replace values
-    for (const [key, value] of Object.entries(allValues)) {
+    // Sanitize all form values before injecting into template
+    const sanitizedValues = Object.entries(allValues).reduce((acc, [key, value]) => {
+      acc[key] = sanitizeTemplateInput(String(value || ''));
+      return acc;
+    }, {} as Record<string, string>);
+
+    // Replace values with sanitized versions
+    for (const [key, value] of Object.entries(sanitizedValues)) {
       finalPrompt = finalPrompt.replace(
         new RegExp(`\\{\\{${key}\\}\\}`, "g"),
-        value ? String(value) : ""
+        value
       );
     }
 
@@ -102,11 +146,18 @@ export async function POST(req: NextRequest) {
     const chatgptUrl =
       "https://chatgpt.com/?q=" + encodeURIComponent(prompt) + "&embed=true";
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       prompt,
       chatgpt_url: chatgptUrl,
     });
+    
+    // Add rate limit headers
+    response.headers.set('X-RateLimit-Limit', limit.toString());
+    response.headers.set('X-RateLimit-Remaining', remaining.toString());
+    response.headers.set('X-RateLimit-Reset', reset.toString());
+
+    return response;
   } catch (err) {
     return NextResponse.json(
       { success: false, error: "Internal server error" },
