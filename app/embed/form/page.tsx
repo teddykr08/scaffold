@@ -7,11 +7,13 @@ type FieldRow = {
   id: string;
   field_name: string;
   field_label: string;
-  field_type: "text" | "textarea" | "select" | "number" | "runtime";
+  field_type: "text" | "textarea" | "select" | "number" | "runtime" | "media";
   required: boolean;
   order: number;
-  options?: string[] | null;
+  options?: string[] | string | null;
   default_value?: string | null;
+  min?: number | null;
+  max?: number | null;
 };
 
 function EmbedFormInner() {
@@ -48,16 +50,23 @@ function EmbedFormInner() {
       console.log("fetchData -> task", taskData);
       if (taskData.success) {
         setTask(taskData.task);
+        // URL params take priority over database values
         // Only set customization from task data if NOT provided via URL params
-        if (!colorFromUrl) {
-          const color = taskData.task.custom_color ?? taskData.task.customColor ?? "#000000";
+        if (!colorFromUrl && taskData.task) {
+          const color = taskData.task.custom_color || taskData.task.customColor || "#000000";
           console.log("Setting color from API:", color);
           setCustomColor(color);
+        } else if (colorFromUrl) {
+          console.log("Using color from URL:", colorFromUrl);
+          setCustomColor(colorFromUrl);
         }
-        if (!fontFromUrl) {
-          const font = taskData.task.font ?? taskData.task.font_family ?? "Inter";
+        if (!fontFromUrl && taskData.task) {
+          const font = taskData.task.font || taskData.task.font_family || "Inter";
           console.log("Setting font from API:", font);
           setFontFamily(font);
+        } else if (fontFromUrl) {
+          console.log("Using font from URL:", fontFromUrl);
+          setFontFamily(fontFromUrl);
         }
       }
 
@@ -171,6 +180,11 @@ function EmbedFormInner() {
   }
 
   function renderField(field: FieldRow) {
+    // Skip media fields from being rendered as input fields
+    if (field.field_type === "media") {
+      return null;
+    }
+
     const val = values[field.field_name] || "";
 
     const label = (
@@ -208,7 +222,7 @@ function EmbedFormInner() {
             }
           >
             <option value="">-- Select --</option>
-            {(field.options || []).map((opt) => (
+            {(Array.isArray(field.options) ? field.options : typeof field.options === 'string' && field.options ? [field.options] : []).map((opt) => (
               <option key={opt} value={opt}>
                 {opt}
               </option>
@@ -226,6 +240,8 @@ function EmbedFormInner() {
             type="number"
             className="field-input mt-1 w-full rounded-lg border px-3 py-2 transition-all focus:outline-none focus:ring-2"
             value={val}
+            min={typeof field.min === 'number' ? field.min : undefined}
+            max={typeof field.max === 'number' ? field.max : undefined}
             onChange={(e) =>
               setValues({ ...values, [field.field_name]: e.target.value })
             }
@@ -247,6 +263,49 @@ function EmbedFormInner() {
         />
       </div>
     );
+  }
+
+  function renderMediaField(field: FieldRow) {
+    if (field.field_type !== "media" || !field.options) return null;
+    // Support both string and string[] for options
+    const opt = Array.isArray(field.options) ? field.options[0] : field.options;
+    if (!opt) return null;
+
+    if (opt.startsWith("image:")) {
+      const imageUrl = opt.substring(6);
+      if (!imageUrl) return null;
+      return (
+        <div key={field.id} className="relative z-10 mb-6">
+          <div className="text-sm font-semibold text-gray-700 mb-2">{field.field_label}</div>
+          <div className="rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              src={imageUrl} 
+              alt={field.field_label}
+              className="w-full h-auto"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                e.currentTarget.parentElement!.innerHTML = `<div class='p-4 text-sm text-red-600'>Failed to load image</div>`;
+              }}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (opt.startsWith("text:")) {
+      const textContent = opt.substring(5);
+      if (!textContent) return null;
+      return (
+        <div key={field.id} className="relative z-10 mb-6">
+          <div className="text-sm font-semibold text-gray-700 mb-2">{field.field_label}</div>
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-700 whitespace-pre-wrap font-mono">
+            {textContent}
+          </div>
+        </div>
+      );
+    }
+    return null;
   }
 
   // --- Dynamic Styling Logic ---
@@ -330,9 +389,16 @@ function EmbedFormInner() {
       <div className="mx-auto max-w-2xl">
         <div className="card-container p-6 md:p-10 space-y-6">
 
+          {/* Render media fields first */}
+          {fields
+            .filter((f) => f.field_type === "media")
+            .map((field) => renderMediaField(field))}
+
+          {/* Then render input fields */}
           {fields
             .filter((f) => 
               f.field_type !== "runtime" && 
+              f.field_type !== "media" &&
               !f.field_label.toLowerCase().includes("additional instructions") && 
               f.field_name !== "additional_instructions" &&
               f.field_name !== "field_list" && // Hide field_list since it comes from URL

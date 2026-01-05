@@ -176,7 +176,7 @@ export async function PUT(req: NextRequest) {
     try {
         const supabaseServer = getSupabaseServer();
         const body = await req.json();
-        const { id, field_label, field_type, required, options, min, max } = body;
+        const { id, field_label, field_type, required, options, min, max, order } = body;
 
         if (!id) {
             return NextResponse.json(
@@ -210,6 +210,7 @@ export async function PUT(req: NextRequest) {
         if (options !== undefined) updates.options = options;
         if (min !== undefined) updates.min = min;
         if (max !== undefined) updates.max = max;
+        if (order !== undefined) updates.order = order;
 
         // First, get the field to check app ownership
         const { data: existingField, error: fetchError } = await supabaseServer

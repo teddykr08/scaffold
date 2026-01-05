@@ -16,12 +16,18 @@ export default function Page() {
     <main className="min-h-screen">
       {/* SECTION 1: Hero */}
       <section className="text-center py-20 px-6 border-b">
+        <div className="flex justify-center mb-6">
+          <span className="font-graffiti text-7xl sm:text-8xl text-black">scaffold</span>
+        </div>
+
         <h1 className="text-5xl md:text-6xl font-bold mb-6 max-w-4xl mx-auto">
           Add AI Features to Your Site. No Code, No API Keys.
         </h1>
+
         <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
           Build custom AI tools and chatbots, then embed them anywhere. Free forever.
         </p>
+
         <div className="flex flex-col sm:flex-row justify-center gap-4">
           <Link
             href="/login?mode=signup"
@@ -90,11 +96,12 @@ export default function Page() {
             <p className="text-gray-700 mb-6">
               One input → One AI output. Perfect for content creation.
             </p>
-            <div className="bg-gray-100 rounded-lg p-6 mb-4 h-64 flex items-center justify-center">
-              <p className="text-gray-500 text-center">
-                📝 Demo: Blog Title Generator<br/>
-                <span className="text-sm">(Will be replaced with actual embed)</span>
-              </p>
+            <div className="rounded-lg mb-4">
+              <iframe 
+                src="https://scaffoldtool.vercel.app/embed/form?app_id=eee1a61f-c5d8-463b-a143-5f8a05dfe2a5&task_name=blog_title_generator&color=%23000000&font=Inter" 
+                className="w-full rounded-lg border-0"
+                style={{ minHeight: '400px' }}
+              />
             </div>
             <p className="text-sm text-gray-600">
               <strong>Use for:</strong> Blog titles, emails, descriptions, code snippets
@@ -106,11 +113,12 @@ export default function Page() {
             <p className="text-gray-700 mb-6">
               AI with your specific knowledge. Answers questions about YOUR stuff.
             </p>
-            <div className="bg-gray-100 rounded-lg p-6 mb-4 h-64 flex items-center justify-center">
-              <p className="text-gray-500 text-center">
-                🍕 Demo: Restaurant Menu Bot<br/>
-                <span className="text-sm">(Will be replaced with actual embed)</span>
-              </p>
+            <div className="rounded-lg mb-4">
+              <iframe 
+                src="https://scaffoldtool.vercel.app/embed/form?app_id=eee1a61f-c5d8-463b-a143-5f8a05dfe2a5&task_name=restaurant_menu_bot&color=%23000000&font=Inter" 
+                className="w-full rounded-lg border-0"
+                style={{ minHeight: '400px' }}
+              />
             </div>
             <p className="text-sm text-gray-600">
               <strong>Use for:</strong> Menu bots, FAQ bots, tutors, product finders

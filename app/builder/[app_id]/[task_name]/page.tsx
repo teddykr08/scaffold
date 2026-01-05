@@ -29,9 +29,11 @@ type TaskRow = {
     system_header?: string | null;
     fixed_content?: string | null;
     created_at: string;
+    custom_color?: string | null;
+    font?: string | null;
 };
 
-type FieldType = "text" | "textarea" | "select" | "number" | "runtime";
+type FieldType = "text" | "textarea" | "select" | "number" | "runtime" | "media";
 
 type FieldRow = {
     id: string;
@@ -109,7 +111,8 @@ async function authenticatedFetch(
 
 function validateTemplate(template: string, fields: FieldRow[]): string | null {
     const templateVars = [...template.matchAll(/\{\{(\w+)\}\}/g)].map(m => m[1]);
-    const fieldNames = fields.map(f => f.field_name);
+    // Only include non-media fields in validation
+    const fieldNames = fields.filter(f => f.field_type !== "media").map(f => f.field_name);
     const missing = templateVars.filter(v => !fieldNames.includes(v) && v !== "system_header");
 
     if (missing.length > 0) {
@@ -146,13 +149,21 @@ function FieldCreator({
     const [maxValue, setMaxValue] = useState<string>("100");
 
     // Update form when editingField changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     useEffect(() => {
         if (editingField) {
             setLabel(editingField.field_label);
             setName(editingField.field_name);
             setType(editingField.field_type);
             setRequired(editingField.required);
-            setOptions(editingField.options?.join("\n") || "");
+            // Handle options for different field types
+            if (editingField.field_type === "select") {
+                setOptions(editingField.options?.join("\n") || "");
+            } else if (editingField.field_type === "media") {
+                setOptions(Array.isArray(editingField.options) ? editingField.options[0] || "" : "");
+            } else {
+                setOptions("");
+            }
             setHasMin(editingField.min != null);
             setHasMax(editingField.max != null);
             setMinValue(editingField.min?.toString() || "0");
@@ -171,6 +182,17 @@ function FieldCreator({
         }
     }, [editingField]);
 
+    // Initialize options when type changes to media
+    useEffect(() => {
+        if (type === "media" && !options && !editingField) {
+            setOptions("text:");
+        }
+        // Auto-generate name for media fields
+        if (type === "media" && !editingField) {
+            setName("");
+        }
+    }, [type, editingField]);
+
     const handleSave = async () => {
         console.log("handleSave called, editingField:", editingField);
         if (editingField && onUpdate) {
@@ -188,6 +210,9 @@ function FieldCreator({
             if (type === "select") {
                 updates.options = options.split("\n").map(o => o.trim()).filter(Boolean);
             }
+            if (type === "media") {
+                updates.options = [options];
+            }
             console.log("Update data:", updates);
             await onUpdate(editingField.id, updates);
             console.log("onUpdate completed, waiting before clearing form...");
@@ -203,9 +228,9 @@ function FieldCreator({
             console.log("Adding new field");
             const fieldData: Partial<FieldRow> = {
                 field_label: label.trim(),
-                field_name: slugifyFieldName(name || label),
+                field_name: type === "media" ? `media_${Date.now()}` : slugifyFieldName(name || label),
                 field_type: type,
-                required,
+                required: type === "media" ? false : required,
                 order: nextOrder,
                 options: null,
                 default_value: null,
@@ -216,6 +241,9 @@ function FieldCreator({
             }
             if (type === "select") {
                 fieldData.options = options.split("\n").map(o => o.trim()).filter(Boolean);
+            }
+            if (type === "media") {
+                fieldData.options = [options]; // Store image URL or text content as array
             }
             await onAdd(fieldData);
             
@@ -259,7 +287,7 @@ function FieldCreator({
                         value={label}
                         onChange={(e) => {
                             setLabel(e.target.value);
-                            if (!name && !editingField) setName(slugifyFieldName(e.target.value));
+                            if (!name && !editingField && type !== "media") setName(slugifyFieldName(e.target.value));
                         }}
                         placeholder="e.g. Your Name"
                     />
@@ -268,12 +296,15 @@ function FieldCreator({
                 <div>
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Field Name (API)</label>
                     <input
-                        className="w-full rounded-xl border border-gray-300 px-4 py-2.5 bg-white font-mono text-sm focus:outline-none focus:ring-2 focus:ring-black"
+                        className={`w-full rounded-xl border border-gray-300 px-4 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-black ${type === "media" ? "bg-gray-100" : "bg-white"}`}
                         value={name}
                         onChange={(e) => setName(slugifyFieldName(e.target.value))}
-                        placeholder="e.g. user_name"
-                        disabled={!!editingField}
+                        placeholder={type === "media" ? "Not used for media" : "e.g. user_name"}
+                        disabled={!!editingField || type === "media"}
                     />
+                    {type === "media" && (
+                        <div className="text-xs text-gray-500 mt-1">Media fields don&apos;t participate in prompts</div>
+                    )}
                 </div>
 
                 <div>
@@ -287,22 +318,27 @@ function FieldCreator({
                         <option value="textarea">Long Text (Textarea)</option>
                         <option value="number">Number</option>
                         <option value="select">Dropdown (Select)</option>
+                        <option value="media">Media (Display Only)</option>
                     </select>
                 </div>
 
                 <div className="flex items-end pb-2">
-                    <label className="flex items-center gap-3 cursor-pointer group">
+                    <label className={`flex items-center gap-3 ${type === "media" ? "cursor-not-allowed opacity-50" : "cursor-pointer group"}`}>
                         <div className="relative">
                             <input
                                 type="checkbox"
                                 className="sr-only peer"
                                 checked={required}
                                 onChange={(e) => setRequired(e.target.checked)}
+                                disabled={type === "media"}
                             />
                             <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-black"></div>
                         </div>
-                        <span className="text-sm font-semibold text-gray-700 group-hover:text-black transition-colors">Required Field</span>
+                        <span className={`text-sm font-semibold ${type === "media" ? "text-gray-400" : "text-gray-700 group-hover:text-black"} transition-colors`}>Required Field</span>
                     </label>
+                    {type === "media" && (
+                        <div className="text-xs text-gray-500 ml-2">N/A for display fields</div>
+                    )}
                 </div>
             </div>
 
@@ -366,6 +402,66 @@ function FieldCreator({
                         placeholder={"option 1\noption 2\noption 3"}
                     />
                     <div className="text-xs text-gray-500 mt-2">Each line will become one option in the dropdown</div>
+                </div>
+            )}
+
+            {/* Media Content Options */}
+            {type === "media" && (
+                <div className="mt-4 p-4 bg-green-50/50 rounded-xl border border-green-100">
+                    <div className="text-xs font-bold text-gray-700 mb-3 uppercase tracking-wider">Media Content Type</div>
+                    <div className="flex gap-4 mb-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="radio"
+                                checked={options?.startsWith('image:') || false}
+                                onChange={() => setOptions('image:')}
+                                className="w-4 h-4"
+                            />
+                            <span className="text-sm font-semibold">Image</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="radio"
+                                checked={options?.startsWith('text:') || false}
+                                onChange={() => setOptions('text:')}
+                                className="w-4 h-4"
+                            />
+                            <span className="text-sm font-semibold">Text Box</span>
+                        </label>
+                    </div>
+                    
+                    {options?.startsWith('image:') && (
+                        <div>
+                            <label className="text-xs font-bold text-gray-600 mb-2 block">Image URL</label>
+                            <input
+                                type="url"
+                                value={options.replace('image:', '')}
+                                onChange={(e) => setOptions('image:' + e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-sm"
+                                placeholder="https://example.com/menu.jpg"
+                            />
+                            <div className="text-xs text-gray-500 mt-2">Paste the exact URL of your image (Click &quot;Copy Image Address&quot; on browser)</div>
+                        </div>
+                    )}
+                    
+                    {options?.startsWith('text:') && (
+                        <div>
+                            <label className="text-xs font-bold text-gray-600 mb-2 block">Display Text</label>
+                            <textarea
+                                value={options.replace('text:', '')}
+                                onChange={(e) => setOptions('text:' + e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 bg-white text-sm font-mono min-h-[200px]"
+                                placeholder="Enter text to display (e.g., menu items, instructions, etc.)"
+                            />
+                            <div className="text-xs text-gray-500 mt-2">This text will be displayed but won&apos;t be part of the prompt</div>
+                        </div>
+                    )}
+                    
+                    <div className="mt-3 p-3 bg-green-100/50 rounded-lg">
+                        <div className="text-xs text-green-800">
+                            <strong>📌 Note:</strong> Media fields display content to users but don&apos;t send data to the AI. Perfect for showing reference material like menus, examples, or instructions.
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -446,8 +542,11 @@ export default function TaskEditorPage() {
 
     const embedUrl = useMemo(() => {
         if (!appId || !taskName) return "";
-        return `/embed/form?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(taskName)}&color=${encodeURIComponent(customColor || '#000000')}&font=${encodeURIComponent(font || 'Inter')}`;
-    }, [appId, taskName, customColor, font]);
+        // Use values from task object if available and are strings, otherwise use state
+        const color = typeof task?.custom_color === 'string' && task.custom_color ? task.custom_color : (customColor || '#000000');
+        const fontFamily = typeof task?.font === 'string' && task.font ? task.font : (font || 'Inter');
+        return `/embed/form?app_id=${encodeURIComponent(appId)}&task_name=${encodeURIComponent(taskName)}&color=${encodeURIComponent(color)}&font=${encodeURIComponent(fontFamily)}`;
+    }, [appId, taskName, task?.custom_color, task?.font, customColor, font]);
 
     const prodEmbedUrlHint = useMemo(() => {
         return embedUrl ? `https://scaffoldtool.vercel.app${embedUrl}` : "";
@@ -531,10 +630,27 @@ export default function TaskEditorPage() {
             if (data?.success) {
                 const foundTask = (data.tasks || []).find((t: TaskRow) => t.name === taskName);
                 if (foundTask) {
+                    console.log('[refreshTask] Found task with customization:', {
+                        theme: foundTask.theme,
+                        custom_color: foundTask.custom_color,
+                        font: foundTask.font
+                    });
                     setTask(foundTask);
-                    setTheme(foundTask.theme || "default");
-                    setCustomColor(foundTask.custom_color || "#000000");
-                    setFont(foundTask.font || "Inter");
+                    // Ensure we set the customization values from the database
+                    const dbTheme = foundTask.theme || "default";
+                    const dbColor = foundTask.custom_color || "#000000";
+                    const dbFont = foundTask.font || "Inter";
+                    
+                    // Use a callback to ensure state updates are batched properly
+                    setTheme(dbTheme);
+                    setCustomColor(dbColor);
+                    setFont(dbFont);
+                    
+                    console.log('[refreshTask] Set customization to:', { 
+                        theme: dbTheme, 
+                        color: dbColor, 
+                        font: dbFont 
+                    });
                 } else {
                     setTask(null);
                 }
@@ -696,6 +812,54 @@ export default function TaskEditorPage() {
 
         setStatus("✅ Task field deleted");
         await refreshTaskFields();
+    }
+
+    async function moveFieldUp(fieldId: string) {
+        const fieldIndex = taskFields.findIndex(f => f.id === fieldId);
+        if (fieldIndex <= 0) return; // Already at top
+
+        const newFields = [...taskFields];
+        [newFields[fieldIndex - 1], newFields[fieldIndex]] = [newFields[fieldIndex], newFields[fieldIndex - 1]];
+        
+        // Update orders
+        newFields.forEach((field, idx) => {
+            field.order = idx;
+        });
+        
+        setTaskFields(newFields);
+        
+        // Save new order to database
+        await Promise.all(newFields.map(field => 
+            authenticatedFetch("/api/task-fields", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: field.id, order: field.order })
+            })
+        ));
+    }
+
+    async function moveFieldDown(fieldId: string) {
+        const fieldIndex = taskFields.findIndex(f => f.id === fieldId);
+        if (fieldIndex >= taskFields.length - 1) return; // Already at bottom
+
+        const newFields = [...taskFields];
+        [newFields[fieldIndex], newFields[fieldIndex + 1]] = [newFields[fieldIndex + 1], newFields[fieldIndex]];
+        
+        // Update orders
+        newFields.forEach((field, idx) => {
+            field.order = idx;
+        });
+        
+        setTaskFields(newFields);
+        
+        // Save new order to database
+        await Promise.all(newFields.map(field => 
+            authenticatedFetch("/api/task-fields", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id: field.id, order: field.order })
+            })
+        ));
     }
 
     async function saveCustomization() {
@@ -999,21 +1163,54 @@ export default function TaskEditorPage() {
 
 
                                     {/* Task Fields */}
-                                    {taskFields.filter(f => f.field_type !== "runtime" && !f.field_label.toLowerCase().includes("additional instructions") && f.field_name !== "additional_instructions").map((f) => (
-                                        <div key={f.id} className="group relative rounded-xl border border-gray-200 p-4 pr-14 transition-all hover:border-gray-400 hover:shadow-sm flex items-center justify-between">
+                                    {taskFields.filter(f => f.field_type !== "runtime" && !f.field_label.toLowerCase().includes("additional instructions") && f.field_name !== "additional_instructions").map((f, index, array) => (
+                                        <div key={f.id} className="group relative rounded-xl border border-gray-200 p-4 transition-all hover:border-gray-400 hover:shadow-sm flex items-center gap-4">
+                                            {/* Reorder Arrows */}
+                                            <div className="flex flex-col gap-1">
+                                                <button
+                                                    onClick={() => moveFieldUp(f.id)}
+                                                    disabled={index === 0}
+                                                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                    title="Move up"
+                                                >
+                                                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                                                    </svg>
+                                                </button>
+                                                <button
+                                                    onClick={() => moveFieldDown(f.id)}
+                                                    disabled={index === array.length - 1}
+                                                    className="p-1 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                                    title="Move down"
+                                                >
+                                                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                            
                                             <div className="flex-1">
                                                 <div className="flex items-center justify-between mb-1">
                                                     <div className="font-bold text-gray-900 uppercase text-xs tracking-wider">{f.field_label}</div>
                                                     <div className="text-[10px] text-gray-500 font-bold">
-                                                        {f.required ? "REQUIRED" : "OPTIONAL"} · {f.field_type.toUpperCase()}
+                                                        {f.field_type === "media" ? "DISPLAY ONLY" : f.required ? "REQUIRED" : "OPTIONAL"} · {f.field_type.toUpperCase()}
                                                         {f.field_type === "number" && (f.min != null || f.max != null) && (
                                                             <span> · {f.min != null ? `MIN:${f.min}` : ""}{f.min != null && f.max != null ? " " : ""}{f.max != null ? `MAX:${f.max}` : ""}</span>
                                                         )}
                                                     </div>
                                                 </div>
-                                                <div className="text-xs text-gray-400 font-mono">{`{{${f.field_name}}}`}</div>
+                                                {f.field_type !== "media" && (
+                                                    <div className="text-xs text-gray-400 font-mono">{`{{${f.field_name}}}`}</div>
+                                                )}
                                                 {f.field_type === "select" && f.options && f.options.length > 0 && (
                                                     <div className="text-xs text-gray-500 mt-1">Options: {f.options.join(", ")}</div>
+                                                )}
+                                                {f.field_type === "media" && f.options && (
+                                                    <div className="text-xs text-gray-500 mt-1">
+                                                        {typeof f.options[0] === "string" && f.options[0].startsWith("image:")
+                                                            ? `Image: ${f.options[0].substring(6)}`
+                                                            : "Text content"}
+                                                    </div>
                                                 )}
                                             </div>
                                             <div className="absolute top-1/2 -translate-y-1/2 right-4">
@@ -1079,7 +1276,7 @@ export default function TaskEditorPage() {
                                     <span className="text-[10px] text-gray-400 font-mono">Click to copy</span>
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                                    {taskFields.filter(f => f.field_type !== "runtime").map((f) => {
+                                    {taskFields.filter(f => f.field_type !== "runtime" && f.field_type !== "media").map((f) => {
                                         const isUsed = template.includes(`{{${f.field_name}}}`);
                                         return (
                                             <button

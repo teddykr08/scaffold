@@ -70,7 +70,7 @@ Make it practical and relevant to the Scaffold builder context. Use examples fro
 ### Add fields to the task:
 1. Add field: `field_list` (textarea)
 2. Add field: `task_purpose` (textarea)
-3. Add field: `additional_constraints` (textarea)
+3. Add field: `requirements` (textarea)
 
 ### Set the template:
 Paste this template:
@@ -104,7 +104,7 @@ Current template:
 
 Available form fields: {{field_list}}
 Task purpose: {{task_purpose}}
-Any specific requirements: {{additional_constraints}}
+Any specific requirements: {{requirements}}
 
 Improve this template by:
 - Adding a clear role/persona if missing
