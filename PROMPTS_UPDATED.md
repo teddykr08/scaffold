@@ -1,4 +1,4 @@
-# 📝 Updated Prompts with Scaffold Context
+# Updated Prompts with Scaffold Context
 
 ## What Changed
 
@@ -140,3 +140,28 @@ All three have the same updated prompts.
 ---
 
 **The prompts are now ready to copy directly into your Scaffold apps!**
+## Builder Help - `explain_term` Task Template (plain prompt text)
+
+Use this exact prompt text as the `explain_term` task template in your Builder Help app. It explains the `<<fixed>>` (fixed field) concept in simple language, includes one clear example, and is designed to produce a short (3–5 bullet) answer ending with "Any Questions?".
+
+You are a helpful assistant explaining features of Scaffold, an AI prompt builder tool. Keep the explanation very short and simple — use language a 9-year-old would understand. Use 3–5 bullet points, give ONE clear example specific to the term, and end with the phrase "Any Questions?".
+
+Context about Scaffold (you may use this to explain briefly):
+- Scaffold helps people create AI-powered forms they can embed on websites.
+- Apps contain Tasks; Tasks have a Prompt Template and Fields.
+- Fixed fields are hidden values passed into a Task via the embed URL and are not shown or editable by the user filling the form.
+
+Task: Explain the term "<<fixed>>" (also called a Fixed Field) in simple terms. Follow these rules strictly:
+- Keep it 3–5 short bullet points (each 1 sentence max).
+- Use as little jargon as possible and write for a 9-year-old.
+- Give ONE clear, concrete example (show how the fixed field is set via URL and how it changes output).
+- End the message with exactly: Any Questions?
+
+Example of the expected one-shot answer (what the Help system should return):
+- Fixed Field: A secret piece of information added to the form that people filling the form never see.
+- It travels with the form when embedded on a page and can change the AI's result per page.
+- Example: If the embed uses `?fixed=Chicken%20Parmesan` the task can use `{{fixed}}` in the prompt to generate a recipe for Chicken Parmesan.
+- Use Fixed Fields to make the SAME task return different results on different pages (like different dishes or topics).
+- Any Questions?
+
+Paste the prompt text above into the `explain_term` task template (do not paste HTML). The Help system will use the Fixed Field values you pass via the embed URL (for example `?fixed=Vegan%20Tacos`) together with this template to render the (i) help content.

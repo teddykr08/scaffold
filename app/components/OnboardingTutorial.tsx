@@ -80,18 +80,16 @@ const OnboardingTutorial: React.FC = () => {
       }
     },
 
-    // Step 1: Example Projects
+    // Step 1: Example Project
     {
       content: (
         <div className="text-left space-y-3">
-          <h3 className="text-xl font-bold">Example Projects 📚</h3>
-          <p>We&apos;ve created 3 examples to inspire you:</p>
+          <h3 className="text-xl font-bold">Example Project 📚</h3>
+          <p>We&apos;ve created 1 example to inspire you:</p>
           <ul className="list-disc pl-5 text-sm space-y-1">
-            <li><b>Recipe Genius</b>: Formless task (uses URL data)</li>
             <li><b>Study Tutor</b>: Standard form with inputs</li>
-            <li><b>Personal Trainer</b>: Another standard form</li>
           </ul>
-          <p className="text-xs text-gray-400 mt-2">(You can explore or delete these later!)</p>
+          <p className="text-xs text-gray-400 mt-2">(You can explore or delete this later!)</p>
         </div>
       ),
       target: 'body',
@@ -704,47 +702,54 @@ const OnboardingTutorial: React.FC = () => {
     return () => observer.disconnect();
   }, [stepIndex, run, steps]);
 
-  // Initialize tutorial state
+  // Initialize tutorial state and listen for restart event
   useEffect(() => {
     setMounted(true);
-    
-    const completed = localStorage.getItem(TUTORIAL_COMPLETED_KEY);
-    
+
+    // Listen for restart event
+    const restartHandler = () => {
+      localStorage.removeItem(TUTORIAL_COMPLETED_KEY);
+      localStorage.removeItem(TUTORIAL_STORAGE_KEY);
+      setStepIndex(0);
+      setTimeout(() => setRun(true), 300);
+    };
+    window.addEventListener('scaffold-restart-tutorial', restartHandler);
+
+    // Always auto-run if not completed, even on localhost or if localStorage is missing
+    let completed = false;
+    try {
+      completed = !!localStorage.getItem(TUTORIAL_COMPLETED_KEY);
+    } catch (e) {
+      completed = false;
+    }
     if (completed) {
-      console.log('✅ Tutorial already completed');
       setRun(false);
-      return;
+      return () => window.removeEventListener('scaffold-restart-tutorial', restartHandler);
     }
-    
+
     if (!pathname?.startsWith('/builder')) {
-      return;
+      return () => window.removeEventListener('scaffold-restart-tutorial', restartHandler);
     }
-    
-    const savedState = loadTutorialState();
-    
-    // Determine step based on CURRENT LOCATION
+
+    const savedState = loadTutorialState && loadTutorialState();
     let initialStep = 0;
-    
     if (pathname.match(/^\/builder\/[^\/]+\/[^\/]+$/)) {
-      // On task editor page - jump to step 7 (or saved step if > 7)
       initialStep = savedState?.stepIndex && savedState.stepIndex >= 7 ? savedState.stepIndex : 7;
     } else if (pathname.match(/^\/builder\/[^\/]+$/)) {
-      // On app tasks page - jump to step 4 (or saved step if between 4-6)
       initialStep = savedState?.stepIndex && savedState.stepIndex >= 4 && savedState.stepIndex <= 6 
         ? savedState.stepIndex 
         : 4;
     } else if (pathname === '/builder') {
-      // On dashboard - use saved step or start at 0
       initialStep = savedState?.stepIndex && savedState.stepIndex <= 3 
         ? savedState.stepIndex 
         : 0;
     }
-    
     setStepIndex(initialStep);
-    
     setTimeout(() => {
       setRun(true);
     }, 800);
+
+    return () => window.removeEventListener('scaffold-restart-tutorial', restartHandler);
   }, [pathname, loadTutorialState]);
 
   // Watch for location changes and adapt tutorial

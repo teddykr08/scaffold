@@ -35,12 +35,12 @@ export default function Page() {
           >
             Get Started (FREE)
           </Link>
-          <Link
-            href="/demo"
-            className="px-8 py-4 border-2 border-gray-300 rounded-xl font-bold hover:bg-gray-50 transition-all"
+          <a
+            href="#demos"
+            className="px-8 py-4 border-2 border-gray-300 rounded-xl font-bold hover:bg-gray-50 transition-all cursor-pointer"
           >
             See Demos
-          </Link>
+          </a>
         </div>
       </section>
 
@@ -87,7 +87,7 @@ export default function Page() {
       </section>
 
       {/* SECTION 3: Two Demo Types */}
-      <section className="py-20 px-6">
+      <section id="demos" className="py-20 px-6">
         <h2 className="text-4xl font-bold text-center mb-12">Two Ways to Use Scaffold</h2>
         
         <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12">
@@ -98,7 +98,7 @@ export default function Page() {
             </p>
             <div className="rounded-lg mb-4">
               <iframe 
-                src="https://scaffoldtool.vercel.app/embed/form?app_id=eee1a61f-c5d8-463b-a143-5f8a05dfe2a5&task_name=blog_title_generator&color=%23000000&font=Inter" 
+                src="https://scaffoldtool.vercel.app/embed/form?app_id=eee1a61f-c5d8-463b-a143-5f8a05dfe2a5&task_name=blog_title_generator&color=%23000000&font=Lato" 
                 className="w-full rounded-lg border-0"
                 style={{ minHeight: '400px' }}
               />
@@ -115,7 +115,7 @@ export default function Page() {
             </p>
             <div className="rounded-lg mb-4">
               <iframe 
-                src="https://scaffoldtool.vercel.app/embed/form?app_id=eee1a61f-c5d8-463b-a143-5f8a05dfe2a5&task_name=restaurant_menu_bot&color=%23000000&font=Inter" 
+                src="https://scaffoldtool.vercel.app/embed/form?app_id=eee1a61f-c5d8-463b-a143-5f8a05dfe2a5&task_name=restaurant_menu_bot&color=%238f0f0f&font=Playfair%20Display" 
                 className="w-full rounded-lg border-0"
                 style={{ minHeight: '400px' }}
               />

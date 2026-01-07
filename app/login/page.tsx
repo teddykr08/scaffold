@@ -33,7 +33,7 @@ function LoginContent() {
         try {
             if (isSignUp) {
                 await signUp(email, password, { username });
-                setSuccess("Check your email for confirmation link!");
+                setSuccess("Check your email for a confirmation link! After confirming, you'll be redirected to the tutorial.");
             } else {
                 await signIn(email, password);
                 router.push("/builder");
@@ -81,6 +81,7 @@ function LoginContent() {
                 {success && (
                     <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
                         {success}
+                        <div className="mt-2 text-xs text-gray-600">If you just confirmed your email, <b><a href=\"/confirm\" className=\"underline\">click here to continue</a></b> if you aren't redirected automatically.</div>
                     </div>
                 )}
 

@@ -1,39 +1,50 @@
+
 # Scaffold - Complete Context Dump
 
 ## What Is Scaffold
-No-code AI app builder. Users create "apps" (projects) containing "tasks" (prompts). Each task has a template with `{{field_name}}` placeholders and form fields. When end-user fills form → fields inject into template → sends to OpenAI → returns result. Forms embed via iframe on any site.
+No-code AI project builder. Users create "projects" containing "tasks" (prompts). Each task has a template with `{{field_name}}` placeholders and form fields. When an end-user fills a form, fields inject into the template, send to OpenAI, and return a result. Forms can be embedded via iframe on any site.
+
 
 ## Tech Stack
-- **Frontend**: Next.js 14 App Router, React, TypeScript, Tailwind CSS
-- **Backend**: Next.js API routes, Supabase (auth + PostgreSQL)
-- **Deployment**: Vercel (scaffoldtool.vercel.app)
-- **AI**: OpenAI API (user provides key in app settings)
 
-## Core Architecture
+
+## Workspace Summary for Claude
+
+This workspace, named "scaffold," is a full-stack web application project built with Next.js, TypeScript, and Tailwind CSS. Key features:
+
+- **Frontend:** Modular pages and components in `app/`, including builder, demo, docs, and more. Dynamic routing for project and task-specific pages.
+- **Backend/API:** API routes in `app/api/` for prompt generation, global fields, task management, and project CRUD.
+- **Database:** SQL migration scripts in `migrations/` for schema evolution, including tasks, projects, and user isolation.
+- **Testing:** Automated Playwright tests in `tests/` for end-to-end flows and UI verification.
+- **Configuration:** Next.js, Tailwind, PostCSS, and TypeScript configs. Supabase for authentication and data storage.
+- **Scripts:** Setup, verification, and template management utilities in `scripts/`.
+- **Documentation:** Markdown guides for setup, troubleshooting, features, and user isolation.
+
+Scaffold is designed for rapid prototyping and robust feature development, with a focus on modularity, testability, and clear documentation.
 
 ### Data Model
 ```
 users (Supabase auth)
-├── apps (projects)
+├── projects
 │   ├── id, name, user_id, created_at
 │   └── tasks
-│       ├── id, app_id, name, description, user_id, theme, custom_color, font
+│       ├── id, project_id, name, description, user_id, theme, custom_color, font
 │       ├── prompt_templates (template text with {{placeholders}})
 │       └── task_fields (form fields)
-│           ├── id, app_id, task_name, field_name, field_label, field_type
+│           ├── id, project_id, task_name, field_name, field_label, field_type
 │           ├── required, order, options[], default_value, min, max
-│           └── field_type: text|textarea|select|number|runtime
+│           └── field_type: text|textarea|select|number|media|runtime
 ```
 
 ### User Flow
-1. **Builder** (`/builder`): User creates app → adds tasks → designs template → configures fields
+1. **Builder** (`/builder`): User creates project → adds tasks → designs template → configures fields (including reordering and media fields)
 2. **Embed** (`/embed/form`): End-user fills form → generates prompt → calls OpenAI → shows result
-3. **Demo** (`/demo`): Marketing page showing Scaffold demo form
+3. **Demo** (`/demo`): Interactive demo page showing Scaffold form and features
 
 ### Key URLs
-- `/builder` - Dashboard (list apps)
-- `/builder/[app_id]` - Task list for app
-- `/builder/[app_id]/[task_name]` - Task editor (template, fields, embed code)
+- `/builder` - Dashboard (list projects)
+- `/builder/[app_id]` - Task list for project
+- `/builder/[app_id]/[task_name]` - Task editor (template, fields, embed code, field reordering, media field)
 - `/embed/form?app_id=X&task_name=Y&color=%23HEX&font=FontName` - Public form
 - `/demo` - Demo page (app_id: eee1a61f-c5d8-463b-a143-5f8a05dfe2a5, task: show_demo)
 
@@ -58,13 +69,13 @@ users (Supabase auth)
 - `AuthContext.tsx` - Supabase auth wrapper
 
 ### API Routes
-- `GET /api/apps` - List user's apps
-- `POST /api/apps` - Create app
-- `GET /api/apps/[id]` - Get app details
-- `PUT /api/apps/[id]` - Rename app (body: {name})
-- `DELETE /api/apps/[id]` - Delete app
+- `GET /api/apps` - List user's projects
+- `POST /api/apps` - Create project
+- `GET /api/apps/[id]` - Get project details
+- `PUT /api/apps/[id]` - Rename project (body: {name})
+- `DELETE /api/apps/[id]` - Delete project
 
-- `GET /api/tasks?app_id=X` - List tasks in app
+- `GET /api/tasks?app_id=X` - List tasks in project
 - `POST /api/tasks` - Create task
 - `PUT /api/tasks` - Update task (name, theme, custom_color, font)
 - `DELETE /api/tasks?id=X` - Delete task
@@ -91,28 +102,30 @@ users (Supabase auth)
 ### Free Tier Limits
 ```typescript
 const FREE_TIER_LIMITS = {
-  APPS_PER_ACCOUNT: 5,
-  TASKS_PER_APP: 5
+  PROJECTS_PER_ACCOUNT: 3,
+  TASKS_PER_PROJECT: 5
 };
 ```
-- Enforced in `builder/page.tsx` (createApp)
-- Enforced in `builder/[app_id]/page.tsx` (createTask)
-- Display: "X / 5 apps" or "X / 5 tasks"
+- Enforced in `builder/page.tsx` (createProject)
+- Enforced in `builder/[project_id]/page.tsx` (createTask)
+- Display: "X / 3 projects" or "X / 5 tasks"
 
 ### Field Types
 1. **text** - Short text input
 2. **textarea** - Long text input
 3. **select** - Dropdown (options: string[])
 4. **number** - Number input (min/max optional)
-5. **runtime** - Hidden field (not shown in form)
+5. **media** - Image/file upload field (new)
+6. **runtime** - Hidden field (not shown in form)
 
 ### Field Configuration
 - **label**: Display text in form
 - **name**: Placeholder variable (`{{field_name}}`)
 - **required**: Boolean
-- **order**: Sort order
+- **order**: Sort/reorder fields (drag-and-drop supported)
 - **options**: Dropdown choices (one per line in textarea)
 - **min/max**: Number constraints (toggleable checkboxes)
+- **media**: Upload images/files (media field type)
 
 ### Template System
 - Template textarea with `{{field_name}}` placeholders
@@ -212,12 +225,12 @@ Same as above
   - `scaffold-restart-tutorial` - resets tutorial
 
 ### Demo Page (/demo)
-- **App ID**: eee1a61f-c5d8-463b-a143-5f8a05dfe2a5
+- **Project ID**: eee1a61f-c5d8-463b-a143-5f8a05dfe2a5
 - **Task**: show_demo
-- **Fields**: coding_experience (1-10), current_tool (dropdown), app_idea (optional text)
+- **Fields**: coding_experience (1-10), current_tool (dropdown), project_idea (optional text), media (optional image upload)
 - **Embed URL**: `/embed/form?app_id=eee1a61f-c5d8-463b-a143-5f8a05dfe2a5&task_name=show_demo&color=%23fdcd13&font=Montserrat`
 - **Styling**: White background, black text (removed purple gradient)
-- **Purpose**: Personalized Scaffold pitch based on skill level
+- **Purpose**: Interactive demo of Scaffold features and customization
 
 ### Fixed Issues
 1. **ActionMenu dropdown**: Now positioned middle-right, won't overlap fields below
@@ -314,17 +327,19 @@ POST /api/generate-prompt
 - Supabase errors return in `{ success: false, error: "message" }` format
 
 ## User Personas
-1. **Builder**: Creates apps in /builder, configures templates/fields
+1. **Builder**: Creates projects in /builder, configures templates/fields, reorders fields, adds media fields
 2. **End User**: Fills forms in /embed/form, sees AI results
-3. **Visitor**: Tries demo at /demo, sees Scaffold pitch
+3. **Visitor**: Tries demo at /demo, sees Scaffold features
 
 ## Key Constraints
-- 5 apps per account (free tier)
-- 5 tasks per app (free tier)
+- 3 projects per account (free tier)
+- 5 tasks per project (free tier)
 - Field names cannot be changed after creation (breaks templates)
 - Template must use defined fields (validation warns but allows save)
 - Embed forms are public (no auth required)
 - Builder routes require authentication
+- Fields can be reordered (drag-and-drop)
+- Media fields allow image/file uploads
 
 ## Error Handling Patterns
 ```typescript

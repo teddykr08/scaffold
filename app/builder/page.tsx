@@ -7,7 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 import BuilderDashboardUI from "../components/BuilderDashboardUI";
 
 const FREE_TIER_LIMITS = {
-  APPS_PER_ACCOUNT: 5,
+  APPS_PER_ACCOUNT: 3, // Free tier limit
   TASKS_PER_APP: 5,
 };
 
@@ -60,6 +60,7 @@ export default function BuilderDashboardPage() {
   const [status, setStatus] = useState<string>("");
   const [taskCounts, setTaskCounts] = useState<Record<string, number>>({});
   const [dataLoading, setDataLoading] = useState(true);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const isFetchingRef = useRef(false);
 
   useEffect(() => {
@@ -109,13 +110,15 @@ export default function BuilderDashboardPage() {
 
   async function createApp(name: string) {
     setStatus("");
-    
-    // Check if at limit
-    if (apps.length >= FREE_TIER_LIMITS.APPS_PER_ACCOUNT) {
-      setStatus(`❌ App limit reached: Maximum ${FREE_TIER_LIMITS.APPS_PER_ACCOUNT} apps per account`);
+    if (!name.trim()) {
+      alert('Please enter a project name');
       return;
     }
-    
+    // Check if user has hit the limit
+    if (apps.length >= FREE_TIER_LIMITS.APPS_PER_ACCOUNT) {
+      setShowUpgradeModal(true);
+      return;
+    }
     const res = await authenticatedFetch("/api/apps", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -127,14 +130,10 @@ export default function BuilderDashboardPage() {
       return;
     }
     setStatus("✅ App created");
-    
-    // Optimistically add the new app immediately
     if (data.app) {
       setApps(prevApps => [...prevApps, data.app]);
       setTaskCounts(prev => ({ ...prev, [data.app.id]: 0 }));
     }
-    
-    // Refresh to ensure sync
     await refreshApps();
     window.dispatchEvent(new CustomEvent('scaffold-app-created'));
   }
@@ -221,6 +220,54 @@ export default function BuilderDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowUpgradeModal(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-2xl font-bold mb-2">You&apos;ve Hit the Free Tier Limit</h2>
+            <p className="text-gray-600 mb-4">
+              Free accounts can create up to 3 apps. You currently have {apps.length}.
+            </p>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <p className="font-semibold text-blue-900 mb-2">Want More?</p>
+              <p className="text-sm text-blue-800">
+                Scaffold Pro is coming soon with:
+              </p>
+              <ul className="text-sm text-blue-800 list-disc pl-5 mt-2 space-y-1">
+                <li>Unlimited apps and tasks</li>
+                <li>Analytics and A/B testing</li>
+                <li>Custom domains</li>
+                <li>Priority support</li>
+              </ul>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowUpgradeModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  alert('Pro tier coming soon! We\'ll notify you when it launches.');
+                  setShowUpgradeModal(false);
+                }}
+                className="flex-1 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800"
+              >
+                Join Waitlist
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <BuilderDashboardUI
         apps={apps.map(app => ({
           ...app,
