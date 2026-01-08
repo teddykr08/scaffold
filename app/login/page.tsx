@@ -1,10 +1,9 @@
 "use client";
-
-import { useState, useEffect, Suspense } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 
-function LoginContent() {
+function LoginContentInner() {
     const searchParams = useSearchParams();
     const mode = searchParams.get("mode");
     const [isSignUp, setIsSignUp] = useState(mode === "signup");
@@ -50,14 +49,18 @@ function LoginContent() {
         setSuccess("");
         setLoading(true);
         try {
-            if (provider === "google") await signInWithGoogle();
-            else await signInWithGitHub();
+            if (provider === "google") {
+                await signInWithGoogle();
+            } else if (provider === "github") {
+                await signInWithGitHub();
+            }
+            router.push("/builder");
         } catch (err: any) {
             setError(err.message);
+        } finally {
             setLoading(false);
         }
     }
-
     return (
         <main className="min-h-screen bg-white flex items-center justify-center p-6 text-gray-900">
             <div className="w-full max-w-md">
@@ -71,20 +74,17 @@ function LoginContent() {
                         </p>
                     )}
                 </div>
-
                 {error && (
                     <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
                         {error}
                     </div>
                 )}
-
                 {success && (
                     <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
                         {success}
-                        <div className="mt-2 text-xs text-gray-600">If you just confirmed your email, <b><a href=\"/confirm\" className=\"underline\">click here to continue</a></b> if you aren't redirected automatically.</div>
+                        <div className="mt-2 text-xs text-gray-600">If you just confirmed your email, <b><a href="/confirm" className="underline">click here to continue</a></b> if you aren't redirected automatically.</div>
                     </div>
                 )}
-
                 <div className="space-y-3 mb-6">
                     <button
                         onClick={() => handleSocialAuth("google")}
@@ -99,7 +99,6 @@ function LoginContent() {
                         </svg>
                         Continue with Google
                     </button>
-
                     <button
                         onClick={() => handleSocialAuth("github")}
                         disabled={loading}
@@ -111,7 +110,6 @@ function LoginContent() {
                         Continue with GitHub
                     </button>
                 </div>
-
                 <div className="relative mb-6">
                     <div className="absolute inset-0 flex items-center">
                         <div className="w-full border-t border-gray-200"></div>
@@ -120,7 +118,6 @@ function LoginContent() {
                         <span className="px-2 bg-white text-gray-500">Or continue with email</span>
                     </div>
                 </div>
-
                 <form onSubmit={handleEmailAuth} className="space-y-4">
                     {isSignUp && (
                         <div>
@@ -138,7 +135,6 @@ function LoginContent() {
                             />
                         </div>
                     )}
-
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Email
@@ -151,7 +147,6 @@ function LoginContent() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black transition-all"
                         />
                     </div>
-
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Password
@@ -165,7 +160,6 @@ function LoginContent() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black transition-all"
                         />
                     </div>
-
                     <button
                         type="submit"
                         disabled={loading}
@@ -174,7 +168,6 @@ function LoginContent() {
                         {loading ? "Loading..." : isSignUp ? "Sign Up" : "Sign In"}
                     </button>
                 </form>
-
                 <p className="text-center text-sm text-gray-600 mt-6">
                     {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
                     <button
@@ -191,8 +184,8 @@ function LoginContent() {
 
 export default function LoginPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <LoginContent />
+        <Suspense>
+            <LoginContentInner />
         </Suspense>
     );
 }

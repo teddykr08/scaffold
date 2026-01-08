@@ -1,7 +1,10 @@
-import { useEffect } from "react";
+
+
+"use client";
+import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function ConfirmPage() {
+function ConfirmPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -19,5 +22,13 @@ export default function ConfirmPage() {
 
   return (
     <main className="min-h-screen flex items-center justify-center text-lg">Welcome! Redirecting to your builder and starting the tutorial...</main>
+  );
+}
+
+export default function ConfirmPage() {
+  return (
+    <Suspense>
+      <ConfirmPageInner />
+    </Suspense>
   );
 }
