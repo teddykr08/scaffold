@@ -44,6 +44,10 @@ scripts/
 
 # Ignore archived node_modules created by cleanup scripts
 archive_cleanup_*/node_modules/
+archive_cleanup_*/tests/
+archive_cleanup_*/playwright-report/
+archive_cleanup_*/test-results/
+archive_cleanup_*/scripts/
 
 
 # debug
