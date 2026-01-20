@@ -1,4 +1,5 @@
 import Link from "next/link";
+import EmbedScrollListener from "./components/EmbedScrollListener";
 
 const useCases = [
   { icon: '🍕', title: 'Restaurant Menu Bot', desc: 'Answers "What\'s vegan?" using your menu' },
@@ -97,8 +98,9 @@ export default function Page() {
               One input → One AI output. Perfect for content creation.
             </p>
             <div className="rounded-lg mb-4">
-              <iframe 
-                src="https://scaffoldtool.vercel.app/embed/form?app_id=eee1a61f-c5d8-463b-a143-5f8a05dfe2a5&task_name=blog_title_generator&color=%23000000&font=Lato" 
+              <iframe
+                id="embed-iframe-1"
+                src="/embed/form?app_id=eee1a61f-c5d8-463b-a143-5f8a05dfe2a5&task_name=blog_title_generator&color=%23000000&font=Lato"
                 className="w-full rounded-lg border-0"
                 style={{ minHeight: '400px' }}
               />
@@ -114,8 +116,9 @@ export default function Page() {
               AI with your specific knowledge. Answers questions about YOUR stuff.
             </p>
             <div className="rounded-lg mb-4">
-              <iframe 
-                src="https://scaffoldtool.vercel.app/embed/form?app_id=eee1a61f-c5d8-463b-a143-5f8a05dfe2a5&task_name=restaurant_menu_bot&color=%238f0f0f&font=Playfair%20Display" 
+              <iframe
+                id="embed-iframe-2"
+                src="/embed/form?app_id=eee1a61f-c5d8-463b-a143-5f8a05dfe2a5&task_name=restaurant_menu_bot&color=%238f0f0f&font=Playfair%20Display"
                 className="w-full rounded-lg border-0"
                 style={{ minHeight: '400px' }}
               />
@@ -126,6 +129,8 @@ export default function Page() {
           </div>
         </div>
       </section>
+
+        <EmbedScrollListener />
 
       {/* SECTION 4: Use Case Grid */}
       <section className="py-20 px-6 bg-gray-50">
@@ -169,47 +174,84 @@ export default function Page() {
               <strong>We don&apos;t call OpenAI&apos;s API</strong> → We don&apos;t pay per request → You don&apos;t pay per request
             </p>
             <p className="text-green-800 font-bold text-xl">
-              ✅ Free tier (3 apps, 5 tasks each) stays free forever. No credit card required.
+              ✅ Free tier (3 apps, 3 tasks each) stays free forever. No credit card required.
             </p>
           </div>
         </div>
       </section>
 
-      {/* SECTION 6: When NOT to Use Scaffold */}
-      <section className="py-20 px-6 bg-red-50">
-        <h2 className="text-4xl font-bold text-center mb-8">When Scaffold Isn&apos;t Right</h2>
-        <p className="text-center text-gray-700 mb-12 max-w-2xl mx-auto">
-          We&apos;re honest about our limitations:
-        </p>
-        <div className="max-w-4xl mx-auto space-y-6">
-          <div className="bg-white p-6 rounded-xl border-l-4 border-red-500">
-            <p className="text-gray-800">
-              <span className="text-2xl mr-3">❌</span>
-              <strong>Need responses embedded in your site?</strong> Use OpenAI API directly.
-            </p>
+      {/* SECTION 6: Free Alternative to AI API Keys */}
+      <section className="py-20 px-6 bg-blue-50">
+        <h2 className="text-4xl font-bold text-center mb-8">Free Alternative to AI API Keys (OpenAI, Anthropic, Google)</h2>
+        <div className="max-w-4xl mx-auto mb-10">
+          <div className="bg-white p-8 rounded-xl border-l-4 border-blue-500 mb-6">
+            <h3 className="text-2xl font-bold mb-2">Problem</h3>
+            <ul className="list-disc pl-6 text-gray-800 space-y-1">
+              <li>API keys cost money and require a credit card</li>
+              <li>Backend setup and server security needed</li>
+              <li>Ongoing monitoring and usage limits</li>
+            </ul>
           </div>
-          <div className="bg-white p-6 rounded-xl border-l-4 border-red-500">
-            <p className="text-gray-800">
-              <span className="text-2xl mr-3">❌</span>
-              <strong>Building a production app for a business with revenue?</strong> Pay for proper API access.
-            </p>
+          <div className="bg-white p-8 rounded-xl border-l-4 border-green-500 mb-6">
+            <h3 className="text-2xl font-bold mb-2">Solution</h3>
+            <p className="text-gray-800">Scaffold lets you add AI features to your site without managing API keys from OpenAI, Claude, Gemini, or any LLM provider. Scaffold generates prompts that users send to ChatGPT (or their preferred LLM) for free—no backend or billing required.</p>
           </div>
-          <div className="bg-white p-6 rounded-xl border-l-4 border-red-500">
-            <p className="text-gray-800">
-              <span className="text-2xl mr-3">❌</span>
-              <strong>Need conversation history/memory?</strong> Scaffold is stateless - each submission is independent.
-            </p>
+          <div className="bg-white p-8 rounded-xl border-l-4 border-gray-400 mb-6">
+            <h3 className="text-2xl font-bold mb-4">API Approach vs Scaffold</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-left border border-gray-200">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="py-2 px-4 border-b">Feature</th>
+                    <th className="py-2 px-4 border-b">API Approach</th>
+                    <th className="py-2 px-4 border-b">Scaffold</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="py-2 px-4 border-b">Cost</td>
+                    <td className="py-2 px-4 border-b">Pay per request</td>
+                    <td className="py-2 px-4 border-b font-bold text-green-700">Free</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-4 border-b">Setup</td>
+                    <td className="py-2 px-4 border-b">Backend, API keys</td>
+                    <td className="py-2 px-4 border-b">No backend, no keys</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-4 border-b">Security</td>
+                    <td className="py-2 px-4 border-b">Must secure keys</td>
+                    <td className="py-2 px-4 border-b">No sensitive keys</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-4 border-b">User Experience</td>
+                    <td className="py-2 px-4 border-b">Direct response in app</td>
+                    <td className="py-2 px-4 border-b">Prompt opens in ChatGPT</td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 px-4">Best For</td>
+                    <td className="py-2 px-4">Production, high volume</td>
+                    <td className="py-2 px-4">Prototypes, side projects</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div className="bg-white p-6 rounded-xl border-l-4 border-red-500">
-            <p className="text-gray-800">
-              <span className="text-2xl mr-3">❌</span>
-              <strong>High-volume production traffic?</strong> API gives you more control and better UX.
-            </p>
+          <div className="bg-white p-8 rounded-xl border-l-4 border-blue-400 mb-6">
+            <h3 className="text-2xl font-bold mb-2">Use Cases</h3>
+            <ul className="list-disc pl-6 text-gray-800 space-y-1">
+              <li>Freelancers and consultants</li>
+              <li>Students and educators</li>
+              <li>Indie developers and hobbyists</li>
+              <li>Anyone prototyping AI features</li>
+            </ul>
+          </div>
+          <div className="text-center mt-10">
+            <Link href="/builder">
+              <span className="inline-block px-10 py-4 bg-scaffold-brand text-black rounded-xl font-bold text-lg hover:bg-scaffold-brandHover transition-all shadow-lg">Try the Builder (Free)</span>
+            </Link>
           </div>
         </div>
-        <p className="text-center text-gray-700 mt-8 max-w-3xl mx-auto italic">
-          <strong>The tradeoff:</strong> Redirecting to ChatGPT isn&apos;t ideal, but it&apos;s free. For prototypes and side projects, that&apos;s often worth it.
-        </p>
       </section>
 
       {/* SECTION 7: Final CTA */}

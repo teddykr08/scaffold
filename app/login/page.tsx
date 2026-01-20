@@ -31,8 +31,18 @@ function LoginContentInner() {
 
         try {
             if (isSignUp) {
-                await signUp(email, password, { username });
-                setSuccess("Check your email for a confirmation link! After confirming, you'll be redirected to the tutorial.");
+                // Call server-side registration endpoint
+                const res = await fetch("/api/register", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password, username })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                    setError(data.error || "Registration failed");
+                } else {
+                    setSuccess("Check your email for a confirmation link! You will receive a custom confirmation email. After confirming, you'll be redirected to the tutorial.");
+                }
             } else {
                 await signIn(email, password);
                 router.push("/builder");

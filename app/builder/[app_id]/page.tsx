@@ -9,8 +9,8 @@ import ActionMenu from "../../components/ActionMenu";
 import RenameModal from "../../components/RenameModal";
 
 const FREE_TIER_LIMITS = {
-  APPS_PER_ACCOUNT: 5,
-  TASKS_PER_APP: 5,
+    APPS_PER_ACCOUNT: 3,
+    TASKS_PER_APP: 3,
 };
 
 type AppRow = {

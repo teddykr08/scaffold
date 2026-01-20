@@ -3,20 +3,20 @@
 export default function FAQPage() {
     const faqs = [
         {
-            q: "Do I need OpenAI API?",
-            a: "No. Users use their own ChatGPT session to run the prompts you generate. This eliminates your API costs and allows users to use their preferred LLM."
+            q: "What is Scaffold?",
+            a: "Scaffold lets you add AI-powered forms and workflows to your site without needing your own API keys or backend. Users run prompts using their own ChatGPT or LLM accounts."
         },
         {
-            q: "How does embedding work?",
-            a: "Simply copy the provided iframe code and paste it anywhere on your site. It works with React, Vue, Webflow, or plain HTML. We handle all the form logic and prompt generation."
+            q: "How do I add a form to my site?",
+            a: "Use the builder to create a form, then copy the embed code to your website. No coding or server setup required."
         },
         {
-            q: "Is it secure?",
-            a: "Yes. Your prompt templates are stored securely on our servers and variables are injected on the fly. Users never see your raw system instructions if you choose to hide them."
+            q: "Can I use different AI models?",
+            a: "Yes! Scaffold works with any LLM your users have access to, including ChatGPT, Claude, Gemini, and more."
         },
         {
-            q: "Can I customize the form styling?",
-            a: "The embedded form inherits a clean, neutral design that works well with most websites. Premium users will soon be able to customize colors and fonts."
+            q: "Is there a free plan?",
+            a: "Yes, Scaffold offers a free tier for personal and small project use. Upgrade for advanced features and customization."
         }
     ];
 

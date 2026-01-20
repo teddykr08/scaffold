@@ -9,6 +9,18 @@ export default function HowItWorks() {
                 <h1 className="font-graffiti text-5xl mb-8 tracking-tight text-gray-900 text-center uppercase">How it Works</h1>
                 <h2 className="text-2xl font-bold text-gray-800 text-center mb-4 leading-tight">We give your app all the power and convenience of AI, but for FREE</h2>
 
+                {/* Tutorial Video & Screenshots Section */}
+                <div className="mb-16 mt-10 flex flex-col items-center gap-8">
+                    <div className="w-full max-w-2xl aspect-video bg-gray-200 rounded-2xl flex items-center justify-center text-gray-500 text-lg font-semibold border border-gray-300">
+                        Tutorial video coming soon
+                    </div>
+                    <div className="flex flex-wrap gap-4 justify-center w-full">
+                        <div className="w-48 h-32 bg-gray-100 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 font-medium">Screenshot 1</div>
+                        <div className="w-48 h-32 bg-gray-100 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 font-medium">Screenshot 2</div>
+                        <div className="w-48 h-32 bg-gray-100 rounded-xl border border-gray-200 flex items-center justify-center text-gray-400 font-medium">Screenshot 3</div>
+                    </div>
+                </div>
+
                 <div className="prose prose-lg text-gray-700 mx-auto">
                     <p className="text-xl mb-12 text-center text-gray-600 leading-relaxed">
                         Scaffold lets you embed AI prompt forms into your app. Users fill forms, get ChatGPT-ready prompts. <span className="text-black font-semibold underline decoration-gray-300">No API keys needed.</span>

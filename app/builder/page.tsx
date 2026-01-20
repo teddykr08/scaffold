@@ -8,7 +8,7 @@ import BuilderDashboardUI from "../components/BuilderDashboardUI";
 
 const FREE_TIER_LIMITS = {
   APPS_PER_ACCOUNT: 3, // Free tier limit
-  TASKS_PER_APP: 5,
+  TASKS_PER_APP: 3,
 };
 
 type AppRow = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 
 type FieldRow = {
@@ -19,8 +19,43 @@ type FieldRow = {
 function EmbedFormInner() {
   const searchParams = useSearchParams();
 
-  const appIdParam = searchParams.get("app_id");
-  const taskNameParam = searchParams.get("task_name");
+  const getParam = (name: string) => {
+    try {
+      const fromHook = (searchParams as any)?.get?.(name);
+      if (fromHook) return fromHook;
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      if (typeof window !== 'undefined') {
+        const sp = new URLSearchParams(window.location.search);
+        return sp.get(name);
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    try {
+      // If loaded inside an iframe, the host's iframe `src` may contain the params
+      if (typeof window !== 'undefined' && (window as any).frameElement) {
+        try {
+          const fe = window.frameElement as HTMLIFrameElement;
+          if (fe && fe.src) {
+            const u = new URL(fe.src, window.location.origin);
+            return u.searchParams.get(name);
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    return null;
+  };
+
+  const [appIdParam, setAppIdParam] = useState<string | null>(null);
+  const [taskNameParam, setTaskNameParam] = useState<string | null>(null);
+  const iframeIdRef = useRef<string>(`scaffold-iframe-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);
   const fixedContentFromUrl = searchParams.get("fixed");
   const colorFromUrl = searchParams.get("color");
   const fontFromUrl = searchParams.get("font");
@@ -32,10 +67,182 @@ function EmbedFormInner() {
   const [status, setStatus] = useState("");
   const [generatedPrompt, setGeneratedPrompt] = useState("");
   const [copied, setCopied] = useState(false);
+  const promptRef = useRef<HTMLDivElement>(null);
+
+  // Internal handshake state
+  const [lastOutgoing, setLastOutgoing] = useState<any>(null);
+  const [lastParentAck, setLastParentAck] = useState<any>(null);
+  const shouldAutoScrollRef = useRef(false);
+
+  // Ensure params are available after hydration / when embedded
+  useEffect(() => {
+    try {
+      const a = getParam("app_id");
+      const t = getParam("task_name");
+      if (a) setAppIdParam(a);
+      if (t) setTaskNameParam(t);
+    } catch (e) {
+      // ignore
+    }
+  }, [searchParams]);
+
+  // Extracted scroll helper so other effects can call it
+  const doScroll = () => {
+    try {
+      try {
+        if (promptRef.current && typeof promptRef.current.focus === 'function') {
+          promptRef.current.focus({ preventScroll: false });
+        }
+      } catch (e) { /* ignore */ }
+
+      if (promptRef.current) {
+        // Try immediate placement
+        try { promptRef.current.scrollIntoView({ behavior: 'auto', block: 'end' }); } catch (e) {}
+
+        // Compute a precise scroll so the bottom of the prompt sits inside the viewport
+        try {
+          const el = promptRef.current as HTMLElement;
+          const rect = el.getBoundingClientRect();
+          const elHeight = rect.height || el.offsetHeight || el.clientHeight || 0;
+          const padding = 80; // increased breathing room so buttons aren't flush to edge
+          const desired = (window.scrollY || window.pageYOffset) + rect.top - (window.innerHeight - elHeight) + padding;
+          if (!isNaN(desired) && isFinite(desired)) {
+            try { window.scrollTo({ top: Math.max(0, desired), behavior: 'smooth' }); } catch (e) { /* ignore */ }
+          }
+
+          // Follow-up nudge after animation in case layout shifts (e.g. images, fonts)
+          setTimeout(() => {
+            try {
+              const r2 = el.getBoundingClientRect();
+              const elBottom2 = (window.scrollY || window.pageYOffset) + r2.bottom;
+              const viewportBottom2 = (window.scrollY || window.pageYOffset) + window.innerHeight;
+              if (elBottom2 > viewportBottom2 - padding) {
+                const top2 = elBottom2 - window.innerHeight + padding;
+                try { window.scrollTo({ top: Math.max(0, top2), behavior: 'smooth' }); } catch (e) { /* ignore */ }
+              }
+            } catch (e) { /* ignore */ }
+            try { window.scrollBy({ top: 40, behavior: 'smooth' }); } catch (e) { /* ignore */ }
+          }, 450);
+        } catch (e) { /* ignore */ }
+      }
+
+      try {
+        if (window.top && window.top !== window) {
+          try {
+            const rect = promptRef.current?.getBoundingClientRect();
+            const desired = (rect ? rect.top + window.frameElement.getBoundingClientRect().top : 0) + 20;
+            window.top.scrollTo({ top: desired, behavior: 'smooth' });
+          } catch (e) {
+            try { window.top.scrollBy({ top: 200, behavior: 'smooth' }); } catch (e2) { /* ignore */ }
+          }
+        }
+      } catch (e) { /* ignore */ }
+
+      try {
+        const payload = { type: 'scaffold:scrollToPrompt', stamp: Date.now(), app_id: appIdParam, task_name: taskNameParam, src: window.location.href, iframe_id: iframeIdRef.current };
+        setLastOutgoing(payload);
+        window.parent.postMessage(payload, '*');
+      } catch (e) { /* ignore */ }
+
+      try {
+        const ta = promptRef.current?.querySelector('textarea');
+        if (ta && typeof (ta as HTMLTextAreaElement).focus === 'function') {
+          (ta as HTMLTextAreaElement).focus({ preventScroll: false });
+        }
+      } catch (e) { /* ignore */ }
+
+      try {
+        const prevHash = window.location.hash;
+        window.location.hash = '#scaffold-generated-prompt';
+        setTimeout(() => {
+          try { if (history && history.replaceState) history.replaceState(null, document.title, window.location.pathname + window.location.search + (prevHash || '')); } catch (e) { /* ignore */ }
+        }, 500);
+      } catch (e) { /* ignore */ }
+    } catch (e) {
+      console.error('[EmbedForm] robust scroll error', e);
+    }
+  };
+
+  // Scroll to generated prompt after it appears (runs after render)
+  // NOTE: autoscroll only happens when user clicks Generate; handleSubmit triggers the scroll/handshake.
 
   // Customization state - initialize from URL params
   const [customColor, setCustomColor] = useState(colorFromUrl || "#000000");
   const [fontFamily, setFontFamily] = useState(fontFromUrl || "Inter");
+
+  // Listen for parent acknowledgement messages (helps debugging when embedded)
+  useEffect(() => {
+    function onParentMsg(e: MessageEvent) {
+      try {
+        const d = (e.data as any) || {};
+        if (d?.type === 'scaffold:scrolledToPrompt' && d?.iframe_id === iframeIdRef.current) {
+          setLastParentAck(d);
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    window.addEventListener('message', onParentMsg);
+    return () => window.removeEventListener('message', onParentMsg);
+  }, []);
+
+  // Persistent handshake: keep asking parent to scroll until ack (or timeout)
+  const handshakeRef = useRef<{ timer?: number | null; attempts: number }>({ timer: null, attempts: 0 });
+  const startScrollHandshake = () => {
+    try {
+      if (!window.parent) return;
+      handshakeRef.current.attempts = 0;
+      if (handshakeRef.current.timer) {
+        clearInterval(handshakeRef.current.timer as number);
+        handshakeRef.current.timer = null;
+      }
+      const maxAttempts = 6; // a few attempts (~1.8s) then stop
+      const interval = 300;
+      handshakeRef.current.timer = window.setInterval(() => {
+        try {
+          handshakeRef.current.attempts++;
+          const payload = { type: 'scaffold:scrollToPrompt', stamp: Date.now(), app_id: appIdParam, task_name: taskNameParam, src: window.location.href, iframe_id: iframeIdRef.current };
+          setLastOutgoing(payload);
+          window.parent.postMessage(payload, '*');
+          if (handshakeRef.current.attempts >= maxAttempts) {
+            if (handshakeRef.current.timer) {
+              clearInterval(handshakeRef.current.timer as number);
+              handshakeRef.current.timer = null;
+            }
+          }
+        } catch (e) { /* ignore */ }
+      }, interval);
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  // Stop handshake when parent ack received (matching iframe_id)
+  useEffect(() => {
+    if (!lastParentAck) return;
+    try {
+      if (handshakeRef.current.timer) {
+        clearInterval(handshakeRef.current.timer as number);
+        handshakeRef.current.timer = null;
+      }
+    } catch (e) { /* ignore */ }
+  }, [lastParentAck]);
+
+  // Run autoscroll once after the generated prompt is rendered, but only when
+  // `shouldAutoScrollRef` was set (user clicked Generate).
+  useEffect(() => {
+    if (!generatedPrompt) return;
+    if (!shouldAutoScrollRef.current) return;
+    shouldAutoScrollRef.current = false;
+    try {
+      requestAnimationFrame(() => {
+        try { doScroll(); } catch (e) { /* ignore */ }
+      });
+    } catch (e) { /* ignore */ }
+  }, [generatedPrompt]);
+
+  // Debug overlay state is declared above to ensure effects can reference it
 
   useEffect(() => {
     if (!appIdParam || !taskNameParam) return;
@@ -47,25 +254,20 @@ function EmbedFormInner() {
       // 1. Fetch Task Info
       const taskRes = await fetch(`/api/tasks/get?app_id=${encodeURIComponent(appId)}&name=${encodeURIComponent(taskName)}&t=${Date.now()}`, { cache: "no-store" });
       const taskData = await taskRes.json();
-      console.log("fetchData -> task", taskData);
       if (taskData.success) {
         setTask(taskData.task);
         // URL params take priority over database values
         // Only set customization from task data if NOT provided via URL params
         if (!colorFromUrl && taskData.task) {
           const color = taskData.task.custom_color || taskData.task.customColor || "#000000";
-          console.log("Setting color from API:", color);
           setCustomColor(color);
         } else if (colorFromUrl) {
-          console.log("Using color from URL:", colorFromUrl);
           setCustomColor(colorFromUrl);
         }
         if (!fontFromUrl && taskData.task) {
           const font = taskData.task.font || taskData.task.font_family || "Inter";
-          console.log("Setting font from API:", font);
           setFontFamily(font);
         } else if (fontFromUrl) {
-          console.log("Using font from URL:", fontFromUrl);
           setFontFamily(fontFromUrl);
         }
       }
@@ -89,35 +291,17 @@ function EmbedFormInner() {
           defaults[f.field_name] = f.default_value;
         }
       });
-      
-      // Apply URL parameter values (these override defaults)
-      if (fieldListFromUrl) {
-        defaults['field_list'] = fieldListFromUrl;
-      }
-      
-      setValues(defaults);
+
+      // Merge defaults into values state
+      setValues((prev) => ({ ...prev, ...defaults }));
+
+      // No auto-scroll during initial load; wait for explicit user action (Generate)
     }
 
     fetchData();
   }, [appIdParam, taskNameParam, colorFromUrl, fontFromUrl, fieldListFromUrl]);
 
-  // Auto-generate prompt for formless tasks OR tasks with no visible fields (all are URL-provided)
-  useEffect(() => {
-    const visibleFields = fields.filter((f) => 
-      f.field_type !== "runtime" && 
-      !f.field_label.toLowerCase().includes("additional instructions") && 
-      f.field_name !== "additional_instructions" &&
-      f.field_name !== "field_list" && // field_list is hidden since it comes from URL
-      f.field_name !== "purpose" && // Hide purpose field
-      f.field_name !== "requirements" // Hide requirements field
-    );
-    
-    if ((task?.has_form === false || visibleFields.length === 0) && !generatedPrompt && appIdParam && taskNameParam && fields.length > 0) {
-      // Auto-submit for formless tasks or when all fields are pre-filled via URL
-      handleSubmit();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [task, appIdParam, taskNameParam, fields]);
+  // NOTE: do not auto-generate prompts on load. Generation must be explicit via the 'Generate Prompt' button.
 
   async function handleSubmit() {
     setStatus("");
@@ -170,6 +354,16 @@ function EmbedFormInner() {
     if (data.success) {
       setGeneratedPrompt(data.prompt);
       setStatus("✅ Prompt generated! Copy it below.");
+      try {
+          const payload = { type: 'scaffold:scrollToPrompt', stamp: Date.now(), app_id: appIdParam, task_name: taskNameParam, src: window.location.href, iframe_id: iframeIdRef.current };
+          // (silent in production) store last outgoing payload
+          setLastOutgoing(payload);
+          window.parent.postMessage(payload, '*');
+          // mark to auto-scroll once the prompt is rendered
+          shouldAutoScrollRef.current = true;
+          // start persistent handshake until parent acks
+          startScrollHandshake();
+      } catch (e) { /* ignore */ }
     }
   }
 
@@ -425,7 +619,7 @@ function EmbedFormInner() {
         )}
 
         {generatedPrompt && (
-          <div className="mt-8 rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ border: '1px solid #e6e6e9', borderTop: '6px solid var(--brand-color)' }}>
+          <div id="scaffold-generated-prompt" ref={promptRef} tabIndex={-1} className="mt-8 rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500" style={{ border: '1px solid #e6e6e9', borderTop: '6px solid var(--brand-color)' }}>
             <div className="flex items-center gap-3 mb-4">
               <div className="flex h-8 w-8 items-center justify-center rounded-full text-white shadow-lg" style={{ backgroundColor: 'var(--brand-color)' }}>
                 <svg
@@ -540,6 +734,8 @@ function EmbedFormInner() {
           </div>
         )}
       </div>
+
+      {/* debug overlay removed for production */}
 
       {/* Powered by scaffold footer */}
       <div className="fixed bottom-4 right-4 z-50">

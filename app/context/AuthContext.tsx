@@ -56,6 +56,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
         });
         if (error) throw error;
+
+        // Send custom confirmation email via Mailtrap
+        try {
+            await fetch("/api/mailtrap", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    from: { email: "no-reply@yourdomain.com" },
+                    to: [{ email }],
+                    subject: "Confirm your account",
+                    text: `Welcome! Please confirm your account by clicking the link in the Supabase email or logging in.`
+                })
+            });
+        } catch (mailError) {
+            console.error("Mailtrap send error:", mailError);
+        }
     };
 
     const signInWithGoogle = async () => {

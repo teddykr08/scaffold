@@ -1,5 +1,8 @@
 {
     "recommendations": [
         "saoudrizwan.claude-dev"
+    ],
+    "unwantedRecommendations": [
+        "conductor.conductor"
     ]
 }

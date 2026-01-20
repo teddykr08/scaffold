@@ -147,6 +147,7 @@ function FieldCreator({
     const [hasMax, setHasMax] = useState(false);
     const [minValue, setMinValue] = useState<string>("0");
     const [maxValue, setMaxValue] = useState<string>("100");
+    
 
     // Update form when editingField changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -295,13 +296,27 @@ function FieldCreator({
 
                 <div>
                     <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Field Name (API)</label>
-                    <input
-                        className={`w-full rounded-xl border border-gray-300 px-4 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-black ${type === "media" ? "bg-gray-100" : "bg-white"}`}
-                        value={name}
-                        onChange={(e) => setName(slugifyFieldName(e.target.value))}
-                        placeholder={type === "media" ? "Not used for media" : "e.g. user_name"}
-                        disabled={!!editingField || type === "media"}
-                    />
+                    <div className="flex items-center gap-2">
+                        <input
+                            className={`w-full rounded-xl border border-gray-300 px-4 py-2.5 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-black ${type === "media" ? "bg-gray-100" : "bg-white"}`}
+                            value={name}
+                            onChange={(e) => setName(slugifyFieldName(e.target.value))}
+                            placeholder={type === "media" ? "Not used for media" : "e.g. user_name"}
+                            disabled={!!editingField || type === "media"}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => {
+                                navigator.clipboard.writeText(name);
+                                setStatus(`✅ Copied ${name}`);
+                                setTimeout(() => setStatus(""), 2000);
+                            }}
+                            className="px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-600 hover:bg-gray-200"
+                            title="Copy field name"
+                        >
+                            Copy
+                        </button>
+                    </div>
                     {type === "media" && (
                         <div className="text-xs text-gray-500 mt-1">Media fields don&apos;t participate in prompts</div>
                     )}
@@ -388,6 +403,7 @@ function FieldCreator({
                             )}
                         </div>
                     </div>
+                    
                 </div>
             )}
 
@@ -402,6 +418,7 @@ function FieldCreator({
                         placeholder={"option 1\noption 2\noption 3"}
                     />
                     <div className="text-xs text-gray-500 mt-2">Each line will become one option in the dropdown</div>
+                    <div className="text-xs text-gray-400 mt-1">Order matters: options are displayed left-to-right in the order you enter them.</div>
                 </div>
             )}
 
@@ -863,6 +880,8 @@ export default function TaskEditorPage() {
         ));
     }
 
+    
+
     async function saveCustomization() {
         // Debug guard to ensure we have a task ID
         if (!task?.id) {
@@ -1060,7 +1079,7 @@ export default function TaskEditorPage() {
                                                 disabled={isSavingSettings}
                                                 className="px-6 py-2 bg-black text-white rounded-lg text-sm font-bold hover:bg-gray-800 disabled:opacity-50 transition-colors"
                                             >
-                                                {isSavingSettings ? "Saving..." : "Save Look"}
+                                                {isSavingSettings ? "Saving..." : "Refresh Embed"}
                                             </button>
                                         </div>
                                     </div>
@@ -1304,20 +1323,28 @@ export default function TaskEditorPage() {
                                                 key={f.id}
                                                 onClick={() => {
                                                     navigator.clipboard.writeText(`{{${f.field_name}}}`);
-                                                    setStatus(`✅ Copied {{${f.field_name}}}}`);
+                                                    setStatus(`✅ Copied {{${f.field_name}}}`);
                                                     setTimeout(() => setStatus(""), 2000);
                                                 }}
-                                                className={`text-left px-3 py-2 rounded-lg border text-xs font-mono transition-all hover:scale-105 active:scale-95 ${isUsed
-                                                    ? 'bg-green-50 border-green-200 text-green-700 hover:bg-green-100'
-                                                    : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100'
-                                                    }`}
-                                                title={isUsed ? 'Used in template' : 'Not used in template'}
+                                                title={`Click to copy {{${f.field_name}}}`}
+                                                className={`group text-left px-3 py-2 rounded-lg border text-xs font-mono transition-all hover:scale-105 active:scale-95 cursor-pointer ${isUsed
+                                                    ? 'bg-green-50 border-green-200 text-green-700'
+                                                    : 'bg-red-50 border-red-200 text-red-600'
+                                                    } hover:bg-gray-800 hover:text-yellow-400`}
                                             >
-                                                <div className="flex items-center gap-1.5">
-                                                    <div className={`w-1.5 h-1.5 rounded-full ${isUsed ? 'bg-green-500' : 'bg-red-400'}`}></div>
-                                                    <span className="truncate">{f.field_label}</span>
+                                                <div className="flex items-center justify-between gap-1.5">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${isUsed ? 'bg-green-500' : 'bg-red-400'}`}></div>
+                                                        <span className="truncate">{f.field_label}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="text-[10px] opacity-60 mt-0.5 font-mono">{`{{${f.field_name}}}`}</div>
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-500">
+                                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                                        </svg>
+                                                    </div>
                                                 </div>
-                                                <div className="text-[10px] opacity-60 mt-0.5">{`{{${f.field_name}}}`}</div>
                                             </button>
                                         );
                                     })}
