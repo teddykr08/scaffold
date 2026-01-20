@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServer } from "@/lib/supabaseServer";
-import { ratelimit, getRateLimitKey } from '@/lib/ratelimit';
+import { getSupabaseServer } from "../../../lib/supabaseServer";
+import { ratelimit, getRateLimitKey } from '../../../lib/ratelimit';
 
 // Sanitize template input to prevent prompt injection
 const sanitizeTemplateInput = (input: string): string => {

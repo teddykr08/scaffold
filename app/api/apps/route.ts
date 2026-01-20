@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServer } from "@/lib/supabaseServer";
+import { getSupabaseServer } from "../../../lib/supabaseServer";
 
 // GET /api/apps - List all apps for the current user
 export async function GET(req: NextRequest) {

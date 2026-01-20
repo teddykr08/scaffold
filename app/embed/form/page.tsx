@@ -130,7 +130,8 @@ function EmbedFormInner() {
         if (window.top && window.top !== window) {
           try {
             const rect = promptRef.current?.getBoundingClientRect();
-            const desired = (rect ? rect.top + window.frameElement.getBoundingClientRect().top : 0) + 20;
+            const frameTop = (window.frameElement as HTMLElement)?.getBoundingClientRect().top || 0;
+            const desired = (rect ? rect.top + frameTop : 0) + 20;
             window.top.scrollTo({ top: desired, behavior: 'smooth' });
           } catch (e) {
             try { window.top.scrollBy({ top: 200, behavior: 'smooth' }); } catch (e2) { /* ignore */ }

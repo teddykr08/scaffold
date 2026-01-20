@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServer } from "@/lib/supabaseServer";
+import { getSupabaseServer } from "../../../lib/supabaseServer";
 
 // GET /api/prompt-templates?app_id=...&task_name=...
 export async function GET(req: NextRequest) {

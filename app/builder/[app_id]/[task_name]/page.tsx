@@ -147,6 +147,7 @@ function FieldCreator({
     const [hasMax, setHasMax] = useState(false);
     const [minValue, setMinValue] = useState<string>("0");
     const [maxValue, setMaxValue] = useState<string>("100");
+    const [status, setStatus] = useState<string>("");
     
 
     // Update form when editingField changes
