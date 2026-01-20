@@ -1,5 +1,5 @@
 import Link from "next/link";
-import EmbedScrollListener from "@/app/components/EmbedScrollListener";
+import EmbedScrollListener from "./components/EmbedScrollListener";
 
 const useCases = [
   { icon: '🍕', title: 'Restaurant Menu Bot', desc: 'Answers "What\'s vegan?" using your menu' },
