@@ -42,6 +42,9 @@ screenshots/
 docs/
 scripts/
 
+# Ignore archived node_modules created by cleanup scripts
+archive_cleanup_*/node_modules/
+
 
 # debug
 npm-debug.log*
