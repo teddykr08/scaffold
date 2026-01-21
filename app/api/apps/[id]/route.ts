@@ -1,6 +1,6 @@
 export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseServer } from "../../../lib/supabaseServer";
+import { getSupabaseServer } from "../../../../lib/supabaseServer";
 
 // GET /api/apps/[id] - Get one specific app by ID (only if user owns it)
 export async function GET(
