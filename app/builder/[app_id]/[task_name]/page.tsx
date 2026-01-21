@@ -419,7 +419,6 @@ function FieldCreator({
                         placeholder={"option 1\noption 2\noption 3"}
                     />
                     <div className="text-xs text-gray-500 mt-2">Each line will become one option in the dropdown</div>
-                    <div className="text-xs text-gray-400 mt-1">Order matters: options are displayed left-to-right in the order you enter them.</div>
                 </div>
             )}
 
