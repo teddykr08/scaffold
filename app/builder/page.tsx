@@ -8,7 +8,7 @@ import BuilderDashboardUI from "../components/BuilderDashboardUI";
 
 const FREE_TIER_LIMITS = {
   APPS_PER_ACCOUNT: 3, // Free tier limit
-  TASKS_PER_APP: 3,
+  TASKS_PER_APP: 5,
 };
 
 type AppRow = {
@@ -233,7 +233,7 @@ export default function BuilderDashboardPage() {
           >
             <h2 className="text-2xl font-bold mb-2">You&apos;ve Hit the Free Tier Limit</h2>
             <p className="text-gray-600 mb-4">
-              Free accounts can create up to 3 apps. You currently have {apps.length}.
+              Free accounts can create up to 3 apps and 5 tasks per app. You currently have {apps.length}.
             </p>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
               <p className="font-semibold text-blue-900 mb-2">Want More?</p>

@@ -170,11 +170,12 @@ export default function Page() {
           </div>
           
           <div className="bg-green-50 border-2 border-green-200 rounded-xl p-8 text-center">
-            <p className="text-lg font-bold mb-4">
-              <strong>We don&apos;t call OpenAI&apos;s API</strong> → We don&apos;t pay per request → You don&apos;t pay per request
+            <h3 className="text-lg font-bold mb-4">Why Scaffold Is Different</h3>
+            <p className="text-gray-800 mb-4">
+              <strong>We don't call third-party LLM APIs for you.</strong> Instead, Scaffold generates optimized prompts that users send to their preferred LLM (e.g., ChatGPT). That means no per-request billing on our side and a simpler, privacy-friendly integration for many use cases.
             </p>
             <p className="text-green-800 font-bold text-xl">
-              ✅ Free tier (3 apps, 3 tasks each) stays free forever. No credit card required.
+              ✅ Free tier (3 apps, 5 tasks each) stays free forever. No credit card required.
             </p>
           </div>
         </div>
@@ -185,67 +186,54 @@ export default function Page() {
         <h2 className="text-4xl font-bold text-center mb-8">Free Alternative to AI API Keys (OpenAI, Anthropic, Google)</h2>
         <div className="max-w-4xl mx-auto mb-10">
           <div className="bg-white p-8 rounded-xl border-l-4 border-blue-500 mb-6">
-            <h3 className="text-2xl font-bold mb-2">Problem</h3>
+            <h3 className="text-2xl font-bold mb-2">What is Scaffold?</h3>
+            <p className="text-gray-800">Scaffold is a lightweight toolkit for building AI-powered form-based tools and chatbots without hosting your own LLM. Instead of making backend LLM calls for you, Scaffold helps you design prompts, fields, and templates that your users can send to their chosen LLM. This reduces operational cost and simplifies security and privacy concerns for many use cases.</p>
+          </div>
+
+          <div className="bg-white p-8 rounded-xl border-l-4 border-green-500 mb-6">
+            <h3 className="text-2xl font-bold mb-2">Key Benefits & Use Cases</h3>
             <ul className="list-disc pl-6 text-gray-800 space-y-1">
-              <li>API keys cost money and require a credit card</li>
-              <li>Backend setup and server security needed</li>
-              <li>Ongoing monitoring and usage limits</li>
+              <li>Rapid prototyping: build generators, email writers, or menu bots in minutes.</li>
+              <li>Cost control: no per-request LLM billing through Scaffold.</li>
+              <li>Privacy-friendly workflows: users control the AI interaction with their own accounts.</li>
+              <li>Embeddable forms: drop a small iframe into any site and surface tailored prompts.</li>
             </ul>
           </div>
-          <div className="bg-white p-8 rounded-xl border-l-4 border-green-500 mb-6">
-            <h3 className="text-2xl font-bold mb-2">Solution</h3>
-            <p className="text-gray-800">Scaffold lets you add AI features to your site without managing API keys from OpenAI, Claude, Gemini, or any LLM provider. Scaffold generates prompts that users send to ChatGPT (or their preferred LLM) for free—no backend or billing required.</p>
-          </div>
+
           <div className="bg-white p-8 rounded-xl border-l-4 border-gray-400 mb-6">
-            <h3 className="text-2xl font-bold mb-4">API Approach vs Scaffold</h3>
+            <h3 className="text-2xl font-bold mb-4">Comparisons — When to Use What</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full text-left border border-gray-200">
                 <thead>
                   <tr className="bg-gray-100">
                     <th className="py-2 px-4 border-b">Feature</th>
-                    <th className="py-2 px-4 border-b">API Approach</th>
+                    <th className="py-2 px-4 border-b">Direct LLM API</th>
                     <th className="py-2 px-4 border-b">Scaffold</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td className="py-2 px-4 border-b">Cost</td>
-                    <td className="py-2 px-4 border-b">Pay per request</td>
-                    <td className="py-2 px-4 border-b font-bold text-green-700">Free</td>
+                    <td className="py-2 px-4 border-b">Pay per request (variable)</td>
+                    <td className="py-2 px-4 border-b font-bold text-green-700">No per-request billing via Scaffold</td>
                   </tr>
                   <tr>
                     <td className="py-2 px-4 border-b">Setup</td>
-                    <td className="py-2 px-4 border-b">Backend, API keys</td>
-                    <td className="py-2 px-4 border-b">No backend, no keys</td>
+                    <td className="py-2 px-4 border-b">Backend + API keys</td>
+                    <td className="py-2 px-4 border-b">No backend required for many flows</td>
                   </tr>
                   <tr>
-                    <td className="py-2 px-4 border-b">Security</td>
-                    <td className="py-2 px-4 border-b">Must secure keys</td>
-                    <td className="py-2 px-4 border-b">No sensitive keys</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-4 border-b">User Experience</td>
-                    <td className="py-2 px-4 border-b">Direct response in app</td>
-                    <td className="py-2 px-4 border-b">Prompt opens in ChatGPT</td>
-                  </tr>
-                  <tr>
-                    <td className="py-2 px-4">Best For</td>
-                    <td className="py-2 px-4">Production, high volume</td>
-                    <td className="py-2 px-4">Prototypes, side projects</td>
+                    <td className="py-2 px-4 border-b">Best For</td>
+                    <td className="py-2 px-4 border-b">Production systems, custom LLM tuning</td>
+                    <td className="py-2 px-4 border-b">Prototypes, marketing tools, knowledge-based bots</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </div>
-          <div className="bg-white p-8 rounded-xl border-l-4 border-blue-400 mb-6">
-            <h3 className="text-2xl font-bold mb-2">Use Cases</h3>
-            <ul className="list-disc pl-6 text-gray-800 space-y-1">
-              <li>Freelancers and consultants</li>
-              <li>Students and educators</li>
-              <li>Indie developers and hobbyists</li>
-              <li>Anyone prototyping AI features</li>
-            </ul>
-          </div>
+
+          {/* FAQ, Reviews & Directory Listings, and Statistics & Evidence removed until stats are available */}
+
           <div className="text-center mt-10">
             <Link href="/builder">
               <span className="inline-block px-10 py-4 bg-scaffold-brand text-black rounded-xl font-bold text-lg hover:bg-scaffold-brandHover transition-all shadow-lg">Try the Builder (Free)</span>
@@ -266,7 +254,7 @@ export default function Page() {
         >
           Get Started
         </Link>
-        <p className="mt-6 text-gray-500">3 apps included. Always free.</p>
+        <p className="mt-6 text-gray-500">3 apps included. 5 tasks per app. Always free.</p>
       </section>
     </main>
   );
