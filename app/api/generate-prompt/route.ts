@@ -93,12 +93,16 @@ export async function POST(req: NextRequest) {
     // Compose final prompt
     let finalPrompt = templateRow.template;
 
-    // ✅ Replace <<fixed>> placeholder if it exists
+    // ✅ Replace common fixed-field variants if they exist
     if (fixed_content) {
-      finalPrompt = finalPrompt.replace(/<<fixed>>/g, fixed_content);
+      // Support <<fixed>> and variants like <<fixed_variable>>
+      finalPrompt = finalPrompt.replace(/<<\s*fixed[^>]*>>/g, fixed_content);
+      // Support double-curly forms like {{fixed}} and {{fixed_variable}}
+      finalPrompt = finalPrompt.replace(/\{\{\s*fixed(?:[_A-Za-z0-9]*)\s*\}\}/g, fixed_content);
     } else {
-      // If no fixed content provided, remove the placeholder
-      finalPrompt = finalPrompt.replace(/<<fixed>>/g, '');
+      // If no fixed content provided, remove the common placeholders
+      finalPrompt = finalPrompt.replace(/<<\s*fixed[^>]*>>/g, '');
+      finalPrompt = finalPrompt.replace(/\{\{\s*fixed(?:[_A-Za-z0-9]*)\s*\}\}/g, '');
     }
 
     // Combine all values

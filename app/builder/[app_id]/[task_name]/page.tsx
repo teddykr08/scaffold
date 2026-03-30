@@ -570,6 +570,11 @@ export default function TaskEditorPage() {
         return embedUrl ? `https://scaffoldtool.vercel.app${embedUrl}` : "";
     }, [embedUrl]);
 
+    const embedCode = useMemo(() => {
+        if (!embedUrl) return "";
+        return `<iframe src="https://scaffoldtool.vercel.app${embedUrl}${useFixedPrompt ? '&fixed=YOUR_CONTEXT_HERE' : ''}" width="100%" height="600" frameborder="0"></iframe>`;
+    }, [embedUrl, useFixedPrompt]);
+
     // Ref to prevent multiple simultaneous refreshes
     const isRefreshingRef = useRef(false);
 
@@ -1087,7 +1092,7 @@ export default function TaskEditorPage() {
                             </div>
                             {/* Open Form Preview Link */}
                             {prodEmbedUrlHint && (
-                                <div className="flex justify-end mb-4">
+                                <div className="flex gap-2 justify-end mb-4">
                                     <a
                                         href={prodEmbedUrlHint}
                                         target="_blank"
@@ -1097,6 +1102,19 @@ export default function TaskEditorPage() {
                                         Open Form Preview
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                                     </a>
+
+                                    <button
+                                        onClick={() => {
+                                            const urlToCopy = useFixedPrompt ? `${prodEmbedUrlHint}&fixed=YOUR_CONTEXT_HERE` : prodEmbedUrlHint;
+                                            navigator.clipboard.writeText(urlToCopy);
+                                            setStatus(`✅ Form URL copied`);
+                                            setTimeout(() => setStatus(""), 2000);
+                                        }}
+                                        className="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 transition-all"
+                                        title="Copy form URL"
+                                    >
+                                        📋 Copy URL
+                                    </button>
                                 </div>
                             )}
                             {embedUrl && (
@@ -1112,18 +1130,27 @@ export default function TaskEditorPage() {
                                     />
                                 </div>
                             )}
-                            <textarea
-                                readOnly
-                                className="w-full rounded-xl bg-gray-50 border border-gray-200 p-3 font-mono text-xs h-24 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all mb-4"
-                                value={embedUrl ? `<iframe
-  src="https://scaffoldtool.vercel.app${embedUrl}${useFixedPrompt ? '&fixed=YOUR_FIXED_FIELD' : ''}"
-  width="100%"
-  height="600"
-  frameborder="0">
-</iframe>` : "Loading..."}
-                                onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                                title="Click to select all"
-                            />
+                            <div className="relative mb-4">
+                                <textarea
+                                    readOnly
+                                    value={embedCode || "Loading..."}
+                                    className="w-full rounded-xl bg-gray-50 border border-gray-200 p-3 font-mono text-xs h-24 focus:outline-none focus:ring-2 focus:ring-black/5 transition-all"
+                                    onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                                    title="Click to select all"
+                                />
+
+                                <button
+                                    onClick={() => {
+                                        if (!embedCode) return;
+                                        navigator.clipboard.writeText(embedCode);
+                                        setStatus('✅ Embed code copied!');
+                                        setTimeout(() => setStatus(""), 2000);
+                                    }}
+                                    className="absolute top-2 right-2 bg-yellow-500 text-black px-3 py-1 rounded text-sm hover:bg-yellow-400 transition-all"
+                                >
+                                    📋 Copy
+                                </button>
+                            </div>
                             <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100" data-tour="fixed-field-toggle">
                                 <div className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in mt-1">
                                     <input
@@ -1156,6 +1183,46 @@ export default function TaskEditorPage() {
                                     </p>
                                 </div>
                             </div>
+
+                            {useFixedPrompt && (
+                                <div className="mt-4 p-4 bg-gray-900 rounded-lg border border-yellow-500">
+                                    <h4 className="font-semibold mb-2 text-yellow-500">How to Use Fixed Field:</h4>
+                                    <p className="text-sm text-gray-300 mb-3">
+                                        Fixed field adds hidden context to your prompt that users never see. 
+                                        Add it to your embed URL like this:
+                                    </p>
+                                    
+                                    <div className="bg-black p-3 rounded mb-3">
+                                        <code className="text-sm text-green-400">
+                                            &amp;fixed=YOUR_HIDDEN_CONTENT_HERE
+                                        </code>
+                                    </div>
+                                    
+                                    <p className="text-sm text-gray-300 mb-3">
+                                        In your prompt template, use this placeholder:
+                                    </p>
+                                    
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText('{{fixed}}');
+                                            setStatus('✅ Copied {{fixed}}');
+                                            setTimeout(() => setStatus(""), 2000);
+                                            // Optional: show toast "Copied {{fixed}}!"
+                                        }}
+                                        className="bg-yellow-500 text-black px-4 py-2 rounded hover:bg-yellow-400 transition-all"
+                                    >
+                                        📋 Copy {`<<fixed>>`} Placeholder
+                                    </button>
+                                    
+                                    <div className="mt-3 text-xs text-gray-400">
+                                        <strong>Example:</strong> If your URL has <code>&amp;fixed=Restaurant menu: Pizza $10, Burger $8</code>
+                                        <br/>
+                                        And your template has: <code>{`"Answer this question: {{question}}. Context: {{fixed}}"`}</code>
+                                        <br/>
+                                        Users only fill {`{{question}}`}, but AI gets the full menu context.
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </section>
 
@@ -1316,6 +1383,26 @@ export default function TaskEditorPage() {
                                     <span className="text-[10px] text-gray-400 font-mono">Click to copy</span>
                                 </div>
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                    {/* Fixed field copy button */}
+                                    <button
+                                        key="fixed-field"
+                                        onClick={() => {
+                                            navigator.clipboard.writeText('<<fixed>>');
+                                            setStatus('✅ Copied <<fixed>> (also supports {{fixed}})');
+                                            setTimeout(() => setStatus(""), 2000);
+                                        }}
+                                        title="Copy fixed placeholder"
+                                        className={`group text-left px-3 py-2 rounded-lg border text-xs font-mono transition-all hover:scale-105 active:scale-95 cursor-pointer bg-gray-50 border-gray-200 text-gray-700`}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <div className={`w-1.5 h-1.5 rounded-full bg-yellow-400`}></div>
+                                                <span className="truncate">Fixed Field</span>
+                                            </div>
+                                            <div className="text-[10px] opacity-80 font-mono">{'<<fixed>>'}</div>
+                                        </div>
+                                    </button>
+
                                     {taskFields.filter(f => f.field_type !== "runtime" && f.field_type !== "media").map((f) => {
                                         const isUsed = template.includes(`{{${f.field_name}}}`);
                                         return (
